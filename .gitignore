@@ -1,0 +1,25 @@
+.env
+node_modules
+logs/
+web/dist
+web/uploads/
+data/
+
+# screenshots da sessão
+*.png
+.playwright-mcp/
+# exceto os screenshots versionados do README
+!docs/screenshots/*.png
+
+# identidade do recall (contém email/nome — não versionar)
+.recall/
+
+# estado local de ferramentas (config/histórico de sessão — podem ter PII)
+.claude/
+.remember/
+
+# fontes extras locais volumosas (ex: sources-leonardo) — não versionar.
+sources-*/
+# Em sources/ versionamos APENAS o manifest.json (registro do que está no Neon).
+# Os .md indexados (docs de terceiros, já embedados) ficam fora do git.
+sources/*.md

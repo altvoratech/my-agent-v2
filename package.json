@@ -1,0 +1,58 @@
+{
+  "type": "module",
+  "bin": {
+    "my-agent-tui": "bin/my-agent-tui"
+  },
+  "scripts": {
+    "ask": "tsx --env-file=.env src/agents/guardian-of-library.ts",
+    "index": "tsx --env-file=.env src/rag/index.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p web/client/tsconfig.json",
+    "web": "concurrently -n server,client -c green,cyan \"npm:web:server\" \"wait-on http://localhost:3001 && npm run web:client\"",
+    "web:server": "tsx --env-file=.env web/server/server.ts",
+    "web:client": "cd web && vite",
+    "tui": "bun tui/index.tsx"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.158",
+    "@neondatabase/serverless": "^1.1.0",
+    "@opentui/core": "^0.4.2",
+    "@opentui/solid": "^0.4.2",
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "lucide-react": "^1.17.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-textarea-autosize": "^8.5.9",
+    "react-use-websocket": "^4.13.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^4.1.0",
+    "solid-js": "^1.9.13",
+    "sonner": "^2.0.7",
+    "uuid": "^10.0.0",
+    "web-tree-sitter": "0.25.10",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/node": "^25.9.1",
+    "@types/react": "^18.3.29",
+    "@types/react-dom": "^18.3.7",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.0",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vite": "^5.4.21",
+    "wait-on": "^9.0.10"
+  }
+}

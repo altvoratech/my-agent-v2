@@ -1,0 +1,99 @@
+// Definição do AGENTE PRINCIPAL do my-agent — o orquestrador que o chat web conversa.
+// Aqui mora o DOMÍNIO do agente: system prompt, tools, subagentes especialistas e a
+// política de aprovação (human-in-the-loop). O TRANSPORTE da sessão (MessageQueue +
+// AgentSession, streaming-input mode) fica em web/server/ai-client.ts.
+import { consultorServer, CONSULTOR_TOOL } from './consultor.ts';
+import { subagents } from './subagents.ts';
+import { createGuardedHooks } from '../core/guard.ts';
+import { buildAgentOptions } from './runtime.ts';
+
+export function buildSystemPrompt(cwd: string) {
+  return `Você é um assistente de engenharia trabalhando no projeto em: ${cwd}
+Capacidades: ler (Read, Glob, Grep), editar/criar arquivos (Edit, Write), rodar comandos (Bash),
+consultar o guardião (consultar_guardian) — RAG ancorado na base de documentação indexada no Neon/pgvector
+(catálogo do que está indexado em sources/manifest.json) — e DELEGAR subtarefas a subagentes
+especialistas via a tool Agent.
+Subagentes disponíveis (read-only; eles reportam, você implementa):
+- explorer: mapeia/entende o código antes de implementar (arquitetura, onde algo vive, fluxos).
+- reviewer: revisa código contra a doc oficial das libs via guardião (ancorado no Neon).
+- planner: planeja uma implementação não-trivial (passos, arquivos, riscos) sem escrever código.
+- architect: decisões de arquitetura alto-nível e trade-offs/ADR (monolito vs serviços, banco, escala).
+- critic: review de código geral (bugs, riscos, regressões, testes faltando), independente de framework.
+- scribe: rascunha documentação dev-facing (README, AGENTS.md, changelog, PR) e devolve o texto.
+Regras:
+- O diretório de trabalho é ${cwd}. Use caminhos relativos a esse diretório ou absolutos dentro dele.
+- Quando o usuário referenciar um arquivo com @caminho/do/arquivo, leia-o com Read antes de responder.
+- Para tarefas grandes/desconhecidas, delegue a exploração/plano antes de editar (use explorer/planner).
+- PESQUISA ANCORADA: antes de afirmar como qualquer biblioteca/framework/API funciona, consulte o guardião
+  (consultar_guardian) em vez de confiar na memória. Ele faz retrieval no Neon e responde ancorado, citando
+  as fontes; se algo não estiver coberto, responde que não encontrou — então NA DÚVIDA, consulte (o custo de
+  tentar é baixo). O catálogo de fontes indexadas está em sources/manifest.json. Pergunta pontual → chame a
+  tool direto; varrer muitas fontes → delegue ao reviewer/planner.
+- Você pode corrigir o código diretamente (Edit/Write) quando fizer sentido.
+- Um guard bloqueia ações destrutivas (rm -rf, escrita fora do projeto, .env). Se algo for bloqueado, explique e siga outro caminho.
+- Responda em português do Brasil, de forma objetiva.`;
+}
+
+// Ações que mexem no sistema -> pedem confirmação humana via canUseTool.
+const NEEDS_APPROVAL = new Set(['Write', 'Edit', 'MultiEdit', 'Bash', 'NotebookEdit']);
+
+export type ApprovalFn = (req: { tool: string; input: any }) => Promise<boolean>;
+
+// Formato da tool nativa AskUserQuestion (ver sources/user-input.md).
+export interface AskQuestionOption { label: string; description?: string; }
+export interface AskQuestionItem {
+  question: string;
+  header?: string;
+  options?: AskQuestionOption[];
+  multiSelect?: boolean;
+}
+// Recebe as perguntas geradas pelo Claude, devolve { [texto da pergunta]: label(s) }.
+export type QuestionFn = (questions: AskQuestionItem[]) => Promise<Record<string, string>>;
+
+export interface MainAgentParams {
+  model: string;
+  cwd: string;
+  effort?: string;
+  onApproval?: ApprovalFn;
+  onQuestion?: QuestionFn;
+}
+
+// Monta as `options` do query() do agente principal (tudo menos o prompt/queue — isso é
+// transporte). Recebe o onApproval (callback que pergunta ao browser) por injeção.
+// O scaffolding comum (preset, permissionMode, stream) vem de buildAgentOptions.
+export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuestion }: MainAgentParams) {
+  return buildAgentOptions({
+    model,
+    cwd,
+    effort,
+    maxTurns: 200,
+    stream: true, // emite stream_event para o front renderizar token a token
+    prompt: buildSystemPrompt(cwd),
+    mcpServers: { consultor: consultorServer },
+    // subagentes especialistas (read-only) que o agente principal invoca via Agent
+    agents: subagents,
+    // leitura + delegação pré-aprovadas; escrita/exec caem no canUseTool (default mode).
+    // AskUserQuestion NÃO entra aqui de propósito: o guard a marca como 'ask' p/ cair no
+    // canUseTool, onde a pergunta é resolvida (user-input.md). Pré-aprovar pularia isso.
+    allowedTools: ['Read', 'Glob', 'Grep', 'TodoWrite', 'Agent', 'Task', CONSULTOR_TOOL],
+    // guard veta o destrutivo e encaminha mutações ao canUseTool (askOnMutate)
+    hooks: createGuardedHooks(cwd, { askOnMutate: true }),
+    canUseTool: async (toolName, input) => {
+      // Perguntas de esclarecimento: o SDK resolve AskUserQuestion AQUI, não no stream.
+      // Transmitimos as questions ao browser, esperamos a resposta e devolvemos
+      // updatedInput com { questions, answers } — formato exigido pela tool.
+      if (toolName === 'AskUserQuestion' && onQuestion) {
+        const questions = (input as { questions?: AskQuestionItem[] }).questions ?? [];
+        const answers = await onQuestion(questions);
+        return { behavior: 'allow', updatedInput: { ...input, answers } };
+      }
+      if (!NEEDS_APPROVAL.has(toolName) || !onApproval) {
+        return { behavior: 'allow', updatedInput: input };
+      }
+      const ok = await onApproval({ tool: toolName, input });
+      return ok
+        ? { behavior: 'allow', updatedInput: input }
+        : { behavior: 'deny', message: 'Ação recusada pelo usuário.' };
+    },
+  });
+}

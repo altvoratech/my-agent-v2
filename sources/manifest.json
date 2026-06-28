@@ -1,0 +1,622 @@
+{
+  "description": "Registro das fontes de documentação indexadas no Neon (pgvector, tabela \"documents\"). O guardião (consultar_guardian) responde ANCORADO apenas nestas fontes. Categorias são heurísticas (por prefixo); a verdade é o campo \"source\". Regenere com: tsx --env-file=.env scripts/build-sources-manifest.ts",
+  "generatedAt": "2026-06-28",
+  "embedding": "jina-embeddings-v5-text-small · 1024d · cosine (pgvector)",
+  "totals": {
+    "groups": 5,
+    "sources": 145,
+    "chunks": 1764
+  },
+  "groups": {
+    "claude-agent-sdk": {
+      "sources": 26,
+      "chunks": 408,
+      "files": [
+        {
+          "source": "agent-loop.md",
+          "chunks": 24
+        },
+        {
+          "source": "claude-code-features.md",
+          "chunks": 13
+        },
+        {
+          "source": "config.md",
+          "chunks": 1
+        },
+        {
+          "source": "cost-tracking.md",
+          "chunks": 11
+        },
+        {
+          "source": "custom-tools.md",
+          "chunks": 24
+        },
+        {
+          "source": "file-checkpointing.md",
+          "chunks": 18
+        },
+        {
+          "source": "hooks.md",
+          "chunks": 27
+        },
+        {
+          "source": "hosting.md",
+          "chunks": 12
+        },
+        {
+          "source": "mcp.md",
+          "chunks": 23
+        },
+        {
+          "source": "migration-guide.md",
+          "chunks": 18
+        },
+        {
+          "source": "modifying-system-prompts.md",
+          "chunks": 24
+        },
+        {
+          "source": "overview.md",
+          "chunks": 14
+        },
+        {
+          "source": "permissions.md",
+          "chunks": 11
+        },
+        {
+          "source": "plugins.md",
+          "chunks": 15
+        },
+        {
+          "source": "quickstart.md",
+          "chunks": 11
+        },
+        {
+          "source": "secure-deployment.md",
+          "chunks": 23
+        },
+        {
+          "source": "sessions.md",
+          "chunks": 14
+        },
+        {
+          "source": "skills.md",
+          "chunks": 16
+        },
+        {
+          "source": "slash-commands.md",
+          "chunks": 20
+        },
+        {
+          "source": "streaming-output.md",
+          "chunks": 9
+        },
+        {
+          "source": "streaming-vs-single-mode.md",
+          "chunks": 8
+        },
+        {
+          "source": "structured-outputs.md",
+          "chunks": 12
+        },
+        {
+          "source": "subagents.md",
+          "chunks": 23
+        },
+        {
+          "source": "todo-tracking.md",
+          "chunks": 7
+        },
+        {
+          "source": "tool-search.md",
+          "chunks": 7
+        },
+        {
+          "source": "user-input.md",
+          "chunks": 23
+        }
+      ]
+    },
+    "language-reference": {
+      "sources": 6,
+      "chunks": 362,
+      "files": [
+        {
+          "source": "base_model.md",
+          "chunks": 1
+        },
+        {
+          "source": "fields.md",
+          "chunks": 1
+        },
+        {
+          "source": "pydantic_core.md",
+          "chunks": 1
+        },
+        {
+          "source": "python.md",
+          "chunks": 159
+        },
+        {
+          "source": "standard_library_types.md",
+          "chunks": 38
+        },
+        {
+          "source": "typescript.md",
+          "chunks": 162
+        }
+      ]
+    },
+    "leonardo": {
+      "sources": 64,
+      "chunks": 362,
+      "files": [
+        {
+          "source": "leonardo-api-error-messages.md",
+          "chunks": 22
+        },
+        {
+          "source": "leonardo-api-faq.md",
+          "chunks": 19
+        },
+        {
+          "source": "leonardo-blueprints-guide.md",
+          "chunks": 16
+        },
+        {
+          "source": "leonardo-commonly-used-api-values.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-connect-to-leonardoai-mcp.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-deprecations-changes.md",
+          "chunks": 8
+        },
+        {
+          "source": "leonardo-flux-1-kontext-pro.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-flux-2-pro.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-flux-dev.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-flux-schnell.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-generate-enhanced-prompts.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-generate-images-using-alchemy.md",
+          "chunks": 2
+        },
+        {
+          "source": "leonardo-generate-images-using-canvas-inpainting.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-generate-images-using-image-prompts.md",
+          "chunks": 1
+        },
+        {
+          "source": "leonardo-generate-images-using-image-to-image-guidance.md",
+          "chunks": 10
+        },
+        {
+          "source": "leonardo-generate-images-using-photoreal.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-generate-images-using-transparency.md",
+          "chunks": 1
+        },
+        {
+          "source": "leonardo-generate-images-with-realtime-canvas.md",
+          "chunks": 8
+        },
+        {
+          "source": "leonardo-generate-motion-using-generated-images.md",
+          "chunks": 2
+        },
+        {
+          "source": "leonardo-generate-motion-using-uploaded-images.md",
+          "chunks": 2
+        },
+        {
+          "source": "leonardo-generate-with-motion-2-motion-2-fast-using-text-prompts.md",
+          "chunks": 10
+        },
+        {
+          "source": "leonardo-generate-with-motion-2-using-generated-images.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-get-api-code.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-getting-started.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-gpt-image-1-5.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-gpt-image-2.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-guide-to-concurrency-queue-and-rate-limit.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-guide-to-handling-not-safe-for-work-image-generation-nsfw.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-guide-to-the-webhook-callback-feature.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-hailuo-23.md",
+          "chunks": 9
+        },
+        {
+          "source": "leonardo-ideogram-30.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-image-variations-with-universal-upscaler.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-kling-2-1-pro.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-kling-2-5-turbo.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-kling-26.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-kling-30.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-kling-o1.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-kling-o3.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-legacy-faq.md",
+          "chunks": 11
+        },
+        {
+          "source": "leonardo-leonardoai-official-sdks.md",
+          "chunks": 1
+        },
+        {
+          "source": "leonardo-list-of-models.md",
+          "chunks": 2
+        },
+        {
+          "source": "leonardo-ltx-20.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-ltx-23.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-lucid-origin.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-lucid-realism.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-nano-banana-2.md",
+          "chunks": 8
+        },
+        {
+          "source": "leonardo-nano-banana-pro.md",
+          "chunks": 6
+        },
+        {
+          "source": "leonardo-nano-banana.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-need-more-support.md",
+          "chunks": 1
+        },
+        {
+          "source": "leonardo-payg-guide.md",
+          "chunks": 9
+        },
+        {
+          "source": "leonardo-phoenix.md",
+          "chunks": 7
+        },
+        {
+          "source": "leonardo-plan-with-the-pricing-calculator.md",
+          "chunks": 1
+        },
+        {
+          "source": "leonardo-pricing-and-plans-faq.md",
+          "chunks": 17
+        },
+        {
+          "source": "leonardo-pro-upscaler-precise.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-recraft-v4.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-rodin-v2.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-seedance-1-0-pro.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-seedance-10-lite.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-seedance-20.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-seedream-4-0.md",
+          "chunks": 4
+        },
+        {
+          "source": "leonardo-seedream-4-5.md",
+          "chunks": 3
+        },
+        {
+          "source": "leonardo-train-custom-element-and-generate-images.md",
+          "chunks": 8
+        },
+        {
+          "source": "leonardo-veo-30.md",
+          "chunks": 5
+        },
+        {
+          "source": "leonardo-veo-31.md",
+          "chunks": 4
+        }
+      ]
+    },
+    "opentui": {
+      "sources": 46,
+      "chunks": 516,
+      "files": [
+        {
+          "source": "opentui-bindings-react.md",
+          "chunks": 20
+        },
+        {
+          "source": "opentui-bindings-solid.md",
+          "chunks": 31
+        },
+        {
+          "source": "opentui-components-ascii-font.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-components-box.md",
+          "chunks": 9
+        },
+        {
+          "source": "opentui-components-code.md",
+          "chunks": 12
+        },
+        {
+          "source": "opentui-components-diff.md",
+          "chunks": 3
+        },
+        {
+          "source": "opentui-components-frame-buffer.md",
+          "chunks": 12
+        },
+        {
+          "source": "opentui-components-input.md",
+          "chunks": 11
+        },
+        {
+          "source": "opentui-components-line-number.md",
+          "chunks": 5
+        },
+        {
+          "source": "opentui-components-markdown.md",
+          "chunks": 11
+        },
+        {
+          "source": "opentui-components-qr-code.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-components-scrollbar.md",
+          "chunks": 3
+        },
+        {
+          "source": "opentui-components-scrollbox.md",
+          "chunks": 14
+        },
+        {
+          "source": "opentui-components-select.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-components-slider.md",
+          "chunks": 3
+        },
+        {
+          "source": "opentui-components-tab-select.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-components-text.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-components-textarea.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-core-concepts-audio.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-core-concepts-colors.md",
+          "chunks": 16
+        },
+        {
+          "source": "opentui-core-concepts-console.md",
+          "chunks": 11
+        },
+        {
+          "source": "opentui-core-concepts-constructs.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-core-concepts-keyboard.md",
+          "chunks": 12
+        },
+        {
+          "source": "opentui-core-concepts-layout.md",
+          "chunks": 13
+        },
+        {
+          "source": "opentui-core-concepts-lifecycle.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-core-concepts-notifications.md",
+          "chunks": 5
+        },
+        {
+          "source": "opentui-core-concepts-renderables-vs-constructs.md",
+          "chunks": 6
+        },
+        {
+          "source": "opentui-core-concepts-renderables.md",
+          "chunks": 18
+        },
+        {
+          "source": "opentui-core-concepts-renderer.md",
+          "chunks": 34
+        },
+        {
+          "source": "opentui-core-concepts-testing.md",
+          "chunks": 1
+        },
+        {
+          "source": "opentui-getting-started.md",
+          "chunks": 7
+        },
+        {
+          "source": "opentui-keymap-addons.md",
+          "chunks": 10
+        },
+        {
+          "source": "opentui-keymap-core.md",
+          "chunks": 19
+        },
+        {
+          "source": "opentui-keymap-custom-addons.md",
+          "chunks": 29
+        },
+        {
+          "source": "opentui-keymap-hosts.md",
+          "chunks": 16
+        },
+        {
+          "source": "opentui-keymap-overview.md",
+          "chunks": 19
+        },
+        {
+          "source": "opentui-keymap-react.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-keymap-solid.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-plugins-core.md",
+          "chunks": 13
+        },
+        {
+          "source": "opentui-plugins-react.md",
+          "chunks": 9
+        },
+        {
+          "source": "opentui-plugins-slots.md",
+          "chunks": 14
+        },
+        {
+          "source": "opentui-plugins-solid.md",
+          "chunks": 8
+        },
+        {
+          "source": "opentui-reference-color-matrix.md",
+          "chunks": 9
+        },
+        {
+          "source": "opentui-reference-env-vars.md",
+          "chunks": 2
+        },
+        {
+          "source": "opentui-reference-standalone-executables.md",
+          "chunks": 3
+        },
+        {
+          "source": "opentui-reference-tree-sitter.md",
+          "chunks": 10
+        }
+      ]
+    },
+    "solidjs": {
+      "sources": 3,
+      "chunks": 116,
+      "files": [
+        {
+          "source": "solidjs-api-reference.md",
+          "chunks": 58
+        },
+        {
+          "source": "solidjs-overview.md",
+          "chunks": 31
+        },
+        {
+          "source": "solidjs-patterns.md",
+          "chunks": 27
+        }
+      ]
+    }
+  }
+}
