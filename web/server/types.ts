@@ -22,7 +22,9 @@ export interface ChatMessage {
   role: "user" | "assistant" | "thinking" | "tester" | "error";
   content: string;
   timestamp: string;
-  images?: string[]; // URLs /uploads/... das imagens coladas (quando houver)
+  images?: string[];    // URLs /uploads/... das imagens coladas (quando houver)
+  agentName?: string;   // nome de exibição do agente que escreveu (ex: "Ciel", "GPT-4o")
+                        // só presente em mensagens do assistente; null = legado
 }
 
 // WebSocket incoming messages

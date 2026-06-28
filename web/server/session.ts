@@ -5,6 +5,10 @@ import { runTester } from "../../src/agents/tester.ts";
 import { chatStore } from "./chat-store.js";
 import { saveImages } from "./uploads.js";
 
+// Nome de exibição do agente principal — gravado no SQLite e enviado ao cliente.
+// Quando multi-provider chegar, isso vira parâmetro da Session (ex: "GPT-4o").
+const AGENT_NAME = 'Ciel';
+
 // Session manages a single chat conversation with a long-lived agent
 export class Session {
   public readonly chatId: string;
@@ -156,7 +160,7 @@ export class Session {
         if (t === "text") {
           this.streamingId = randomUUID();
           this.activeBlock = "text";
-          this.broadcast({ type: "assistant_start", id: this.streamingId, chatId: this.chatId });
+          this.broadcast({ type: "assistant_start", id: this.streamingId, agentName: AGENT_NAME, chatId: this.chatId });
         } else if (t === "thinking") {
           this.streamingId = randomUUID();
           this.activeBlock = "thinking";
@@ -183,8 +187,8 @@ export class Session {
 
       if (typeof content === "string") {
         // sem streaming desse bloco (caminho raro): persiste e envia inteiro
-        chatStore.addMessage(this.chatId, { role: "assistant", content });
-        this.broadcast({ type: "assistant_message", content, chatId: this.chatId });
+        chatStore.addMessage(this.chatId, { role: "assistant", content, agentName: AGENT_NAME });
+        this.broadcast({ type: "assistant_message", content, agentName: AGENT_NAME, chatId: this.chatId });
       } else if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === "thinking") {
@@ -193,7 +197,7 @@ export class Session {
             if (block.thinking) chatStore.addMessage(this.chatId, { role: "thinking", content: block.thinking });
           } else if (block.type === "text") {
             // o texto já foi transmitido via stream_event; aqui só PERSISTE no SQLite
-            chatStore.addMessage(this.chatId, { role: "assistant", content: block.text });
+            chatStore.addMessage(this.chatId, { role: "assistant", content: block.text, agentName: AGENT_NAME });
           } else if (block.type === "tool_use") {
             // AskUserQuestion é resolvida no canUseTool (vira question_request);
             // não emitir card de tool genérico para ela.

@@ -2,7 +2,7 @@ import { createSignal, createEffect, onCleanup, For, Show } from "solid-js"
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import type { ScrollBoxRenderable, InputRenderable } from "@opentui/core"
 import { createWsClient } from "../createWsClient"
-import type { UIMessage } from "../createWsClient"
+import type { UIMessage, Todo } from "../createWsClient"
 import { COLOR, syntaxStyle, THEMES, setTheme, themeName } from "../theme"
 import { DialogSelect, type SelectOption } from "../components/DialogSelect"
 import { MODELS, EFFORTS, modelLabel, effortLabel } from "../data"
@@ -12,7 +12,7 @@ type DialogKind = null | "model" | "effort" | "theme" | "commands"
 
 const ROLE_LABEL: Record<string, string> = {
   user: "You",
-  assistant: "Agent",
+  assistant: "Ciel",
   thinking: "Thinking",
   tool: "Tool",
   tester: "Tester",
@@ -21,38 +21,166 @@ const ROLE_LABEL: Record<string, string> = {
 
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
-function MessageItem(props: { msg: UIMessage; spinner: string }) {
-  // Lê COLOR direto (store reativo): trocar o tema recolore os labels ao vivo.
+function MessageItem(props: { msg: UIMessage; spinner: string; showThinking: boolean }) {
+  // Lê COLOR direto (store reativo): trocar o tema recolore os labels/bordas ao vivo.
   // As chaves da Palette batem com os roles (user/assistant/thinking/tool/tester/system).
   const color = () => COLOR[props.msg.role as keyof typeof COLOR] ?? COLOR.text
-  const label = () => ROLE_LABEL[props.msg.role] ?? props.msg.role
+  // agentName (ex: "Ciel") tem prioridade sobre ROLE_LABEL — permite multi-provider no futuro
+  const label = () => props.msg.agentName ?? ROLE_LABEL[props.msg.role] ?? props.msg.role
   // Markdown (com highlight) só pro agente; demais papéis em texto plano.
   const isMarkdown = () => props.msg.role === "assistant" || props.msg.role === "tester"
+  const isThinking = () => props.msg.role === "thinking"
+  const isUser = () => props.msg.role === "user"
+
+  // Thinking colapsa quando TERMINA (some o conteúdo, fica só um resumo de 1 linha),
+  // a menos que showThinking (Ctrl+R). Enquanto streama, mostra ao vivo o raciocínio.
+  const collapsed = () => isThinking() && !props.msg.streaming && !props.showThinking
+  // Duração formatada: >=1s → "1.2s", <1s → "776ms"
+  const durationStr = () => {
+    const d = props.msg.duration
+    if (d == null) return null
+    return d >= 1000 ? `${(d / 1000).toFixed(1)}s` : `${d}ms`
+  }
+  const summary = () => {
+    const first = props.msg.content.split("\n").find((l) => l.trim())?.trim() ?? "raciocínio"
+    return first.length > 64 ? first.slice(0, 63) + "…" : first
+  }
 
   return (
-    <box flexDirection="column" marginBottom={1} paddingLeft={1}>
-      <text fg={color()}>
-        <b>
-          {label()}
-          {props.msg.streaming ? " " + props.spinner : ""}
-        </b>
-      </text>
-      <Show
-        when={isMarkdown() && props.msg.content}
-        fallback={
-          <text paddingLeft={2} wrapMode="word" fg={COLOR.text}>
-            {props.msg.content || (props.msg.streaming ? "…" : "")}
+    <box
+      flexDirection="column"
+      marginBottom={1}
+      paddingLeft={1}
+      border={["left"]}
+      borderColor={color()}
+      backgroundColor={isUser() ? COLOR.element : undefined}
+      opacity={isThinking() ? COLOR.thinkingOpacity : 1}
+    >
+      {/* Label em badge (chip): fundo = cor do papel, texto = cor do fundo do app */}
+      <box flexDirection="row">
+        <box backgroundColor={color()} paddingX={1}>
+          <text fg={COLOR.bg}>
+            <b>{label()}</b>
           </text>
-        }
-      >
-        <box paddingLeft={2}>
-          <markdown
-            content={props.msg.content}
-            syntaxStyle={syntaxStyle()}
-            streaming={props.msg.streaming}
-            conceal={true}
-          />
         </box>
+        <Show when={props.msg.streaming}>
+          <text fg={color()}> {props.spinner}</text>
+        </Show>
+        <Show when={collapsed()}>
+          <text fg={COLOR.dim}>
+            {" ▸ "}
+            {durationStr() ? `Thought · ${durationStr()}` : summary()}
+          </text>
+        </Show>
+      </box>
+
+      {/* Conteúdo — oculto quando o thinking está colapsado */}
+      <Show when={!collapsed()}>
+        <Show
+          when={isMarkdown() && props.msg.content}
+          fallback={
+            <text paddingLeft={1} wrapMode="word" fg={COLOR.text}>
+              {props.msg.content || (props.msg.streaming ? "…" : "")}
+            </text>
+          }
+        >
+          <box paddingLeft={1}>
+            <markdown
+              content={props.msg.content}
+              syntaxStyle={syntaxStyle()}
+              streaming={props.msg.streaming}
+              conceal={true}
+            />
+          </box>
+        </Show>
+      </Show>
+    </box>
+  )
+}
+
+// Painel de tarefas: renderiza o plano multi-step do agente (tool nativa TodoWrite)
+// ao vivo, encostado acima do input. Concluídas esmaecem; a em andamento destaca.
+const TASKS_MAX = 6
+function TaskPanel(props: { todos: Todo[] }) {
+  const done = () => props.todos.filter((t) => t.status === "completed").length
+  const icon = (s: Todo["status"]) => (s === "completed" ? "☑" : s === "in_progress" ? "◐" : "☐")
+  const color = (s: Todo["status"]) =>
+    s === "completed" ? COLOR.assistant : s === "in_progress" ? COLOR.user : COLOR.muted
+  const text = (t: Todo) => (t.status === "in_progress" && t.activeForm ? t.activeForm : t.content)
+  return (
+    <box flexDirection="column" paddingX={1} border={["top"]} borderColor={COLOR.border} backgroundColor={COLOR.surface}>
+      <text fg={COLOR.dim}>
+        <b>Tarefas</b> · {done()}/{props.todos.length}
+      </text>
+      <For each={props.todos.slice(0, TASKS_MAX)}>
+        {(t) => (
+          <text fg={color(t.status)} opacity={t.status === "completed" ? 0.6 : 1} wrapMode="word">
+            {icon(t.status)} {text(t)}
+          </text>
+        )}
+      </For>
+      <Show when={props.todos.length > TASKS_MAX}>
+        <text fg={COLOR.dim}>  … +{props.todos.length - TASKS_MAX}</text>
+      </Show>
+    </box>
+  )
+}
+
+// ── Sidebar de contexto ────────────────────────────────────────────────────────
+// Aparece à direita quando largura > 110. Mostra tokens usados, % do context
+// window e custo acumulado da sessão. Barra de progresso muda de cor perto do limite.
+const SIDEBAR_W = 30
+const MODEL_CTX: Record<string, number> = {
+  "claude-opus-4-8": 200_000,
+  "claude-sonnet-4-6": 200_000,
+  "claude-haiku-4-5-20251001": 200_000,
+}
+
+function ContextSidebar(props: {
+  lastResult: { cost?: number; inputTokens?: number; outputTokens?: number } | null
+  model: string
+}) {
+  const maxCtx = () => MODEL_CTX[props.model] ?? 200_000
+  const inp = () => props.lastResult?.inputTokens ?? 0
+  const out = () => props.lastResult?.outputTokens ?? 0
+  const pct = () => Math.min(100, Math.round((inp() / maxCtx()) * 100))
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n))
+
+  // Barra de 10 chars: ■ = usado, ░ = livre
+  const bar = () => {
+    const filled = Math.round(pct() / 10)
+    return `[${"■".repeat(filled)}${"░".repeat(10 - filled)}] ${pct()}%`
+  }
+  const barColor = () =>
+    pct() > 80 ? COLOR.system : pct() > 60 ? COLOR.tool : COLOR.dim
+
+  const hasCost = () => !!props.lastResult?.cost
+  const hasTokens = () => inp() > 0
+
+  return (
+    <box
+      width={SIDEBAR_W}
+      flexDirection="column"
+      border={["left"]}
+      borderColor={COLOR.border}
+      paddingX={1}
+    >
+      <text fg={COLOR.dim}>
+        <b>⊙ Contexto</b>
+      </text>
+      <box height={1} />
+      <Show
+        when={hasTokens()}
+        fallback={<text fg={COLOR.muted}>sem dados ainda</text>}
+      >
+        <text fg={COLOR.text}>↓ {fmt(inp())} tokens</text>
+        <text fg={COLOR.dim}>↑ {fmt(out())} output</text>
+        <box height={1} />
+        <text fg={barColor()}>{bar()}</text>
+      </Show>
+      <Show when={hasCost()}>
+        <box height={1} />
+        <text fg={COLOR.muted}>${props.lastResult!.cost!.toFixed(4)}</text>
       </Show>
     </box>
   )
@@ -351,6 +479,10 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
   onCleanup(() => clearInterval(timer))
   const spinner = () => SPINNER[spinFrame()]
 
+  // Mostrar/ocultar o raciocínio (thinking) já concluído — toggle global (Ctrl+R).
+  // Enquanto o agente pensa, o bloco aparece ao vivo; ao terminar, colapsa num resumo.
+  const [showThinking, setShowThinking] = createSignal(false)
+
   // Histórico de mensagens enviadas, navegável com ↑/↓ quando o input está vazio.
   let sent: string[] = []
   let histIdx = -1
@@ -381,6 +513,7 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
     { value: "theme", label: "Trocar tema", hint: "Ctrl+T" },
     { value: "compact", label: "Compactar contexto", hint: "/compact" },
     { value: "test", label: "Rodar tester", hint: "/test" },
+    { value: "thinking", label: "Mostrar/ocultar raciocínio", hint: "Ctrl+R" },
     { value: "back", label: "Voltar à lista de chats", hint: "ESC" },
     { value: "exit", label: "Sair do my-agent", hint: "/exit" },
   ]
@@ -419,6 +552,10 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
         sendCommand("test", undefined, undefined)
         showToast("Rodando tester...", "info")
         break
+      case "thinking":
+        setShowThinking((v) => !v)
+        showToast(showThinking() ? "Raciocínio visível" : "Raciocínio oculto", "info")
+        break
       case "back":
         props.onBack()
         break
@@ -435,6 +572,7 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
     { value: "theme", label: "/theme", hint: "trocar tema" },
     { value: "compact", label: "/compact", hint: "compactar contexto" },
     { value: "test", label: "/test", hint: "rodar tester" },
+    { value: "thinking", label: "/thinking", hint: "mostrar/ocultar raciocínio" },
     { value: "back", label: "/back", hint: "voltar à lista" },
     { value: "exit", label: "/exit", hint: "encerrar e fechar" },
   ]
@@ -487,6 +625,7 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
     if (k.ctrl && k.name === "e") return setDialog("effort")
     if (k.ctrl && k.name === "t") return openTheme()
     if (k.ctrl && k.name === "p") return setDialog("commands")
+    if (k.ctrl && k.name === "r") return setShowThinking((v) => !v)
     // Slash autocomplete aberto: ↑↓ navegam o popup, Tab completa o nome.
     if (slashOpen()) {
       if (k.name === "up") return setSlashIdx((i) => Math.max(0, i - 1))
@@ -574,17 +713,27 @@ export function ChatScreen(props: { chatId: string; cwd: string; onBack: () => v
         </Show>
       </box>
 
-      {/* Messages */}
-      <scrollbox ref={(r: any) => (scroll = r)} stickyScroll={true} stickyStart="bottom" flexGrow={1}>
-        <box height={1} />
-        <For each={store.messages}>{(msg) => <MessageItem msg={msg} spinner={spinner()} />}</For>
-        <Show when={store.messages.length === 0}>
-          <box paddingLeft={2} paddingTop={1}>
-            <text fg={COLOR.dim}>Nenhuma mensagem ainda. Ctrl+P abre o menu de comandos.</text>
-          </box>
+      {/* Content row: messages + sidebar de contexto (quando width > 110) */}
+      <box flexDirection="row" flexGrow={1}>
+        <scrollbox ref={(r: any) => (scroll = r)} stickyScroll={true} stickyStart="bottom" flexGrow={1}>
+          <box height={1} />
+          <For each={store.messages}>{(msg) => <MessageItem msg={msg} spinner={spinner()} showThinking={showThinking()} />}</For>
+          <Show when={store.messages.length === 0}>
+            <box paddingLeft={2} paddingTop={1}>
+              <text fg={COLOR.dim}>Nenhuma mensagem ainda. Ctrl+P abre o menu de comandos.</text>
+            </box>
+          </Show>
+          <box height={1} />
+        </scrollbox>
+        <Show when={dims().width > 110}>
+          <ContextSidebar lastResult={store.lastResult} model={model()} />
         </Show>
-        <box height={1} />
-      </scrollbox>
+      </box>
+
+      {/* Painel de tarefas (plano TodoWrite do agente) */}
+      <Show when={store.todos.length > 0}>
+        <TaskPanel todos={store.todos} />
+      </Show>
 
       {/* Approval */}
       <Show when={store.pendingApproval}>

@@ -1,12 +1,12 @@
 <div align="center">
 
-# 🤖 my-agent
+# 🤖 my-agent-v2
 
-### Um agente de código local sobre o **[Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript)**
+### Uma evolução do my-agent — agente de engenharia local sobre o **[Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript)**
 
 Um chat completo — em **web** (`my-agent-chat`) e no **terminal** (`my-agent-tui`) — que lê e edita o teu
-código, roda comandos e responde **ancorado na documentação oficial** do SDK via RAG. Começou como o exemplo
-*bug-fixing* do quickstart. Hoje é uma ferramenta de trabalho.
+código, roda comandos e responde **ancorado na documentação oficial** via RAG. Começou como o exemplo
+*bug-fixing* do quickstart. Virou ferramenta. A v2 consolida o que o projeto realmente se tornou.
 
 <br/>
 
@@ -20,9 +20,21 @@ código, roda comandos e responde **ancorado na documentação oficial** do SDK 
 [![Neon](https://img.shields.io/badge/Neon_+_pgvector-00E599?logo=postgresql&logoColor=white)](https://neon.tech/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<sub>Tudo em TypeScript, rodado com <code>tsx</code> · single-user, local-first · cada ação que mexe no sistema passa por <b>aprovação</b> no browser</sub>
+<sub>Tudo em TypeScript, rodado com <code>tsx</code> e <code>Bun</code> · single-user, local-first · toda ação que mexe no sistema passa por <b>aprovação</b></sub>
 
 </div>
+
+---
+
+O **my-agent-v2** é um agente de engenharia de código que orquestra um conjunto de subagentes especialistas (explorer, reviewer, planner, architect, critic, scribe) sobre o Claude Agent SDK. O agente principal lê, edita e executa comandos no teu projeto — sempre com guard de segurança em duas camadas e aprovação human-in-the-loop. Respostas sobre APIs e frameworks são ancoradas por código: o retriever busca no Neon/pgvector (via embeddings Jina) antes de qualquer `query()`, com catálogo de fontes declarado em `sources/manifest.json`. Conversas, imagens e exemplos do prompt enhancer persistem em SQLite local. A interface existe em dois sabores sobre o mesmo backend WebSocket: um web chat rico em React 18 + Vite + Tailwind e um TUI no terminal em OpenTUI (core Zig) + SolidJS, rodado com Bun.
+
+## 🧭 Roadmap / Funcionalidades futuras
+
+- **Multi-provider / agnóstico de modelo** — planejado: sair do acoplamento ao Claude Agent SDK e normalizar a saída de diferentes provedores (estilo Vercel AI SDK / `@ai-sdk/openai-compatible`), permitindo rodar GPT, Gemini, GLM etc.; a normalização vive no adaptador, não na UI — o `DialogSelect` já existe, o trabalho real é o catálogo e o motor.
+- **Polish do TUI (estilo OpenCode)** — em progresso: labels em badge ✅, borda esquerda colorida ✅, thinking colapsável/esmaecido ✅, tasklist ✅. Próximos: sidebar de contexto (tokens / % / custo / MCPs conectados) e thinking com duração ("Thought · 776ms").
+- **Colar imagem no TUI** — planejado: paridade com o web chat; helper de clipboard por plataforma (no Windows via PowerShell `Get-Clipboard -Format Image`); o backend já é multimodal, falta a captura no lado do terminal.
+- **Memória curada do agente** — planejado: fatos destilados que o próprio agente decide guardar, além do histórico bruto já persistido no SQLite — por exemplo, uma tabela `memories` no chat-store com tools de leitura e escrita.
+- **Guardião como MCP standalone** — planejado: expor `consultar_guardian` via servidor MCP stdio, para que qualquer cliente (inclusive outros agentes externos) possa pesquisar a base de documentação indexada no Neon.
 
 ---
 
@@ -115,16 +127,18 @@ Um cliente **no terminal** sobre **[OpenTUI](https://github.com/sst/opentui)** (
 mesmo backend, então conversa, modelo, aprovação e RAG são idênticos.
 
 <table>
-<tr><td><b>⚡ Streaming</b></td><td>respostas token a token com <b>raciocínio visível</b>; spinner enquanto o agente trabalha</td></tr>
+<tr><td><b>⚡ Streaming</b></td><td>respostas token a token com <b>raciocínio visível</b>; spinner animado por estado (idle · streaming · tool)</td></tr>
 <tr><td><b>🎨 Markdown</b></td><td>renderização completa via tree-sitter: <b>headings, negrito, itálico, listas, quotes, links e code blocks</b> com syntax highlight — conceal ativo (marcação oculta)</td></tr>
-<tr><td><b>🔤 Linguagens</b></td><td>syntax highlight para <b>Python, Rust, Go, Bash/sh, C, C++, JSON, YAML, TOML</b> (parsers WASM via tree-sitter, carregados sob demanda) + JS/TS/Markdown built-in</td></tr>
-<tr><td><b>🎛️ Seletores</b></td><td><b>modelo</b> (<code>Ctrl+M</code>), <b>effort</b> (<code>Ctrl+E</code>) e <b>tema</b> (<code>Ctrl+T</code>, com preview ao vivo) — dialogs com filtro fuzzy</td></tr>
-<tr><td><b>💾 Preferências</b></td><td>modelo, effort e tema <b>persistem entre sessões</b> (<code>~/.config/my-agent/config.json</code>, padrão XDG) — reabrir mantém tuas escolhas</td></tr>
-<tr><td><b>⌨️ Comandos</b></td><td><b>command palette</b> (<code>Ctrl+P</code>) e <b>slash menu</b> (<code>/</code>) integrado ao input</td></tr>
+<tr><td><b>🔤 Linguagens</b></td><td>syntax highlight para <b>Python, Rust, Go, Bash/sh, C, C++, JSON, YAML, TOML</b> (parsers WASM via tree-sitter, sob demanda) + JS/TS/Markdown built-in</td></tr>
+<tr><td><b>💬 Mensagens</b></td><td><b>labels em badge</b> (chip com fundo por papel), <b>borda esquerda colorida</b> por turno e fundo sutil na mensagem do usuário — estilo OpenCode</td></tr>
+<tr><td><b>💭 Thinking</b></td><td>raciocínio renderizado com <b>opacidade reduzida</b>; ao terminar, <b>colapsa</b> em resumo de 1 linha (<code>▸ …</code>); <code>Ctrl+R</code> ou <code>/thinking</code> para expandir/colapsar</td></tr>
+<tr><td><b>📋 Tasklist</b></td><td>painel de tarefas do <code>TodoWrite</code> acima do input: contador, ícones <code>☑ ◐ ☐</code> coloridos, em-andamento em destaque, concluídos esmaecidos</td></tr>
+<tr><td><b>🎛️ Seletores</b></td><td><b>modelo</b> (<code>Ctrl+M</code>), <b>effort</b> (<code>Ctrl+E</code>) e <b>tema</b> (<code>Ctrl+T</code>, com preview ao vivo) — dialogs com filtro fuzzy; preferências persistem entre sessões</td></tr>
+<tr><td><b>⌨️ Comandos</b></td><td><b>command palette</b> (<code>Ctrl+P</code>) e <b>slash menu</b> (<code>/</code>) com colunas alinhadas, header de atalhos e <code>/exit</code> em destaque</td></tr>
 <tr><td><b>🛡️ Inline</b></td><td>cards de <b>aprovação</b> (Y/N) e de <b>AskUserQuestion</b> direto no fluxo</td></tr>
-<tr><td><b>📊 Footer</b></td><td>modelo · effort · tokens · custo do turno; toasts com auto-dismiss</td></tr>
-<tr><td><b>🧭 Navegação</b></td><td><code>PgUp/PgDn</code> rolam a conversa · <code>↑↓</code> histórico de input · <code>ESC</code> volta à lista</td></tr>
-<tr><td><b>🚀 Launch</b></td><td><code>npm run tui</code> sobe o backend sozinho se não estiver no ar (e o derruba ao sair); se o web já está rodando, só conecta</td></tr>
+<tr><td><b>📊 Layout</b></td><td><b>top bar</b>: identidade (nome · cwd · modelo · effort) · <b>footer</b>: tokens ↓↑ + custo do turno · indicador de estado</td></tr>
+<tr><td><b>🧭 Navegação</b></td><td><code>PgUp/PgDn</code> rolam a conversa · <code>↑↓</code> histórico de input · <code>ESC</code> volta à lista · <code>/exit</code> ou <code>Ctrl+C</code> encerram de forma limpa</td></tr>
+<tr><td><b>🚀 Launch</b></td><td><code>npm run tui</code> sobe o backend sozinho se não estiver no ar (e o derruba ao sair com shutdown limpo — porta livre garantida)</td></tr>
 </table>
 
 > Os padrões de UI foram extraídos do **[OpenCode](https://github.com/sst/opencode)** (referência em produção de

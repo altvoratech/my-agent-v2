@@ -8,6 +8,16 @@ export type UIMessage = {
   role: "user" | "assistant" | "thinking" | "tool" | "tester" | "system"
   content: string
   streaming: boolean
+  duration?: number    // duração do thinking em ms (só nos blocos role="thinking")
+  agentName?: string   // nome de exibição do agente (ex: "Ciel"); null = legado
+}
+
+// Plano multi-step do agente (tool nativa TodoWrite). O agente emite a lista
+// COMPLETA a cada update — substituímos, não acumulamos.
+export type Todo = {
+  content: string
+  status: "pending" | "in_progress" | "completed"
+  activeForm?: string
 }
 
 export type PendingApproval = { id: string; tool: string; input: any }
@@ -24,6 +34,7 @@ export type Toast = { id: string; text: string; variant: "info" | "success" | "e
 
 type WsStore = {
   messages: UIMessage[]
+  todos: Todo[]
   status: "idle" | "streaming" | "thinking"
   lastResult: { cost?: number; inputTokens?: number; outputTokens?: number } | null
   pendingApproval: PendingApproval | null
@@ -35,6 +46,7 @@ type WsStore = {
 export function createWsClient(chatId: string) {
   const [store, setStore] = createStore<WsStore>({
     messages: [],
+    todos: [],
     status: "idle",
     lastResult: null,
     pendingApproval: null,
@@ -44,6 +56,10 @@ export function createWsClient(chatId: string) {
   })
 
   let ws: WebSocket
+
+  // Rastreia o timestamp de início de cada bloco de thinking (por id de mensagem)
+  // para calcular a duração ao receber thinking_end.
+  const thinkingStart = new Map<string, number>()
 
   // tools que o usuário marcou como "sempre" -> auto-aprovadas no resto da sessão
   const alwaysApprove = new Set<string>()
@@ -71,13 +87,14 @@ export function createWsClient(chatId: string) {
           role: m.role,
           content: m.content,
           streaming: false,
+          agentName: m.agentName ?? undefined,
         })))
         break
 
       case "assistant_start":
         setStore(produce((s) => {
           s.status = "streaming"
-          s.messages.push({ id: msg.id, role: "assistant", content: "", streaming: true })
+          s.messages.push({ id: msg.id, role: "assistant", agentName: msg.agentName, content: "", streaming: true })
         }))
         break
 
@@ -104,6 +121,7 @@ export function createWsClient(chatId: string) {
         break
 
       case "thinking_start":
+        thinkingStart.set(msg.id, Date.now())
         setStore(produce((s) => {
           s.status = "thinking"
           s.messages.push({ id: msg.id, role: "thinking", content: "", streaming: true })
@@ -120,12 +138,23 @@ export function createWsClient(chatId: string) {
       case "thinking_end":
         setStore(produce((s) => {
           const m = s.messages.find((m) => m.id === msg.id)
-          if (m) m.streaming = false
+          if (m) {
+            m.streaming = false
+            const start = thinkingStart.get(msg.id)
+            if (start != null) m.duration = Date.now() - start
+          }
           s.status = "streaming"
         }))
+        thinkingStart.delete(msg.id)
         break
 
       case "tool_use":
+        // TodoWrite = plano multi-step do agente → vai pro painel de Tarefas
+        // (substitui a lista inteira), não vira mensagem de tool no fluxo.
+        if (msg.toolName === "TodoWrite") {
+          setStore("todos", msg.toolInput?.todos ?? [])
+          break
+        }
         setStore("messages", (msgs) => [
           ...msgs,
           {

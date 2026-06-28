@@ -57,6 +57,12 @@ if (!chatCols.some((c) => c.name === "cwd")) {
   db.exec("ALTER TABLE chats ADD COLUMN cwd TEXT");
 }
 
+// Migração: coluna `agentName` — nome de exibição do agente que escreveu a mensagem.
+// null em mensagens antigas (tratadas como "assistant" / "Ciel" na UI por fallback).
+if (!messageCols.some((c) => c.name === "agentName")) {
+  db.exec("ALTER TABLE messages ADD COLUMN agentName TEXT");
+}
+
 class ChatStore {
   private insertChat = db.prepare(
     "INSERT INTO chats (id, title, createdAt, updatedAt) VALUES (?, ?, ?, ?)",
@@ -67,7 +73,7 @@ class ChatStore {
   private setChatCwdStmt = db.prepare("UPDATE chats SET cwd = ? WHERE id = ?");
   private removeChat = db.prepare("DELETE FROM chats WHERE id = ?");
   private insertMessage = db.prepare(
-    "INSERT INTO messages (id, chatId, role, content, images, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO messages (id, chatId, role, content, images, timestamp, agentName) VALUES (?, ?, ?, ?, ?, ?, ?)",
   );
   // rowid como desempate: garante ordem de inserção quando timestamps empatam
   // (ex: bloco de raciocínio e texto persistidos no mesmo milissegundo).
@@ -123,7 +129,7 @@ class ChatStore {
       ...message,
     };
     const imagesJson = newMessage.images?.length ? JSON.stringify(newMessage.images) : null;
-    this.insertMessage.run(newMessage.id, chatId, newMessage.role, newMessage.content, imagesJson, newMessage.timestamp);
+    this.insertMessage.run(newMessage.id, chatId, newMessage.role, newMessage.content, imagesJson, newMessage.timestamp, newMessage.agentName ?? null);
 
     // título automático a partir da 1ª mensagem do usuário (se ainda "New Chat")
     const title =

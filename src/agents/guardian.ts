@@ -11,6 +11,7 @@ import { retrieve, type RetrievedChunk } from '../rag/retrieve.ts';
 import { log } from '../core/logger.ts';
 import { trackingHooks } from '../core/hooks.ts';
 import { buildAgentOptions } from './runtime.ts';
+import { loadPrompt } from '../prompts/loader.ts';
 
 const TOP_K = 8;
 
@@ -41,14 +42,7 @@ const searchDocs = tool(
 
 const libraryServer = createSdkMcpServer({ name: 'library', version: '1.0.0', tools: [searchDocs] });
 
-const SYSTEM = `Você é o Guardian of Library, guardião de uma biblioteca de documentação.
-O prompt já traz um bloco "CONTEXTO DAS FONTES" pré-buscado para a pergunta.
-Regras invioláveis:
-- Responda SOMENTE com base no CONTEXTO DAS FONTES (e em buscas extras, se fizer). Nunca use conhecimento próprio.
-- Se o contexto não bastar, chame search_docs para buscar mais — não invente.
-- Se mesmo assim as fontes não cobrirem, diga "Não encontrei isso nas fontes".
-- Cite as fontes ao final no formato [fonte: arquivo.md].
-- Responda em português do Brasil, de forma objetiva. Para código, copie verbatim da fonte (não reescreva de memória).`;
+const SYSTEM = loadPrompt('guardian');
 
 export interface GuardianResult {
   answer: string;

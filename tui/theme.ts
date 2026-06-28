@@ -16,6 +16,8 @@ export type Palette = {
   accent: string
   bg: string
   surface: string // fundo de cards/dialogs/toasts (um degrau acima do bg)
+  element: string // fundo de elementos sutis (mensagem do user, hover) — degrau acima do surface
+  thinkingOpacity: number // opacidade do bloco de raciocínio (0..1) — esmaece o "thinking"
 }
 
 // Temas: cada um é uma paleta completa. "dark" é o default.
@@ -34,6 +36,8 @@ export const THEMES: Record<string, Palette> = {
     accent: "#fbbf24",
     bg: "#0d0f14",
     surface: "#16181d",
+    element: "#21242d",
+    thinkingOpacity: 0.55,
   },
   light: {
     user: "#0369a1",
@@ -49,6 +53,8 @@ export const THEMES: Record<string, Palette> = {
     accent: "#b45309",
     bg: "#fafafa",
     surface: "#ececec",
+    element: "#dedede",
+    thinkingOpacity: 0.6,
   },
   nord: {
     user: "#88c0d0",
@@ -64,6 +70,8 @@ export const THEMES: Record<string, Palette> = {
     accent: "#ebcb8b",
     bg: "#2e3440",
     surface: "#3b4252",
+    element: "#464f62",
+    thinkingOpacity: 0.6,
   },
   dracula: {
     user: "#8be9fd",
@@ -79,6 +87,8 @@ export const THEMES: Record<string, Palette> = {
     accent: "#ffb86c",
     bg: "#282a36",
     surface: "#343746",
+    element: "#414458",
+    thinkingOpacity: 0.6,
   },
 }
 

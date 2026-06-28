@@ -4,13 +4,13 @@
   "embedding": "jina-embeddings-v5-text-small · 1024d · cosine (pgvector)",
   "totals": {
     "groups": 5,
-    "sources": 145,
-    "chunks": 1764
+    "sources": 149,
+    "chunks": 1807
   },
   "groups": {
     "claude-agent-sdk": {
-      "sources": 26,
-      "chunks": 408,
+      "sources": 30,
+      "chunks": 451,
       "files": [
         {
           "source": "agent-loop.md",
@@ -35,6 +35,22 @@
         {
           "source": "file-checkpointing.md",
           "chunks": 18
+        },
+        {
+          "source": "honcho-architecture.md",
+          "chunks": 10
+        },
+        {
+          "source": "honcho-quickstart.md",
+          "chunks": 11
+        },
+        {
+          "source": "honcho-reasoning.md",
+          "chunks": 11
+        },
+        {
+          "source": "honcho-sdk-reference.md",
+          "chunks": 11
         },
         {
           "source": "hooks.md",
