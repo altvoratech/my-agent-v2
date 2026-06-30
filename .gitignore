@@ -4,6 +4,10 @@ logs/
 web/dist
 web/uploads/
 
+# banco local de conversas/imagens/exemplos (criado e migrado automaticamente;
+# contém PII e o WAL incha o histórico) — não versionar.
+data/
+
 
 # screenshots da sessão
 *.png
