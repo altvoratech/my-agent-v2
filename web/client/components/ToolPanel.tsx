@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { groupConsecutive } from "./toolPanelGrouping";
 
 // Teto de eventos: mantém só os mais recentes (painel não cresce infinito).
 export const MAX_TOOL_EVENTS = 150;
@@ -99,9 +100,34 @@ function Row({ event }: { event: PanelEvent }) {
   );
 }
 
+function CollapsedRun({ toolName, items }: { toolName: string; items: PanelEvent[] }) {
+  const [open, setOpen] = useState(false);
+  // items está em ordem reversa (mais recente primeiro), como o array ordered.
+  const time = items[0].timestamp.slice(11, 19);
+  const { emoji, label } = toolMeta(toolName);
+
+  return (
+    <div className="border-b border-gray-100">
+      <button onClick={() => setOpen((o) => !o)} className="w-full px-3 py-2 flex items-start gap-2 text-left hover:bg-gray-100">
+        <span className="text-base leading-5">{emoji}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-700">{label} ×{items.length}</span>
+            <span className="text-[10px] text-gray-400">{time}</span>
+          </div>
+          <div className="text-xs text-gray-500 truncate">{items.length} chamadas consecutivas</div>
+        </div>
+        <span className="text-[10px] text-gray-400 mt-0.5">{open ? "▼" : "▶"}</span>
+      </button>
+      {open && items.map((e) => <Row key={e.id} event={e} />)}
+    </div>
+  );
+}
+
 export function ToolPanel({ events }: { events: PanelEvent[] }) {
   // mais recentes no topo (sem precisar rolar até o fim pra ver a atividade atual)
   const ordered = [...events].reverse();
+  const rows = useMemo(() => groupConsecutive(ordered), [events]);
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
@@ -109,7 +135,13 @@ export function ToolPanel({ events }: { events: PanelEvent[] }) {
           <p className="text-xs text-gray-400 p-3">Tools, prefetch e bloqueios do guard aparecem aqui ao vivo.</p>
         ) : (
           <>
-            {ordered.map((e) => <Row key={e.id} event={e} />)}
+            {rows.map((r) =>
+              r.kind === "single" ? (
+                <Row key={r.event.id} event={r.event} />
+              ) : (
+                <CollapsedRun key={`run-${r.items[0].id}`} toolName={r.toolName} items={r.items} />
+              )
+            )}
             {events.length >= MAX_TOOL_EVENTS && (
               <p className="text-[10px] text-gray-400 px-3 py-2">Mostrando os últimos {MAX_TOOL_EVENTS} eventos.</p>
             )}
