@@ -13,8 +13,8 @@
 // - Roda em modo OBSERVAÇÃO (enabled:false / DELEGATION_GATE != 'on'): audita,
 //   nunca bloqueia o turno.
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
@@ -38,6 +38,17 @@ async function findCredential(): Promise<{ source: string } | null> {
     if (resolved) return { source: `config (~/.config/my-agent/config.json, via ${resolved.source})` };
   } catch {
     // se o import falhar por qualquer motivo, cai no erro padrão abaixo.
+  }
+  // Assinatura Claude (Pro/Max): o SDK autentica pelo OAuth do Claude Code em
+  // ~/.claude/.credentials.json quando não há API key. É como a aplicação roda
+  // por padrão — exigir uma key aqui bloquearia o e2e sem necessidade.
+  try {
+    const raw = readFileSync(path.join(homedir(), '.claude', '.credentials.json'), 'utf8');
+    if ((JSON.parse(raw) as { claudeAiOauth?: { accessToken?: string } }).claudeAiOauth?.accessToken) {
+      return { source: 'assinatura Claude (OAuth em ~/.claude/.credentials.json)' };
+    }
+  } catch {
+    // arquivo ausente ou ilegível: cai no erro padrão abaixo.
   }
   return null;
 }
