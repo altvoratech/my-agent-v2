@@ -167,7 +167,15 @@ export function createDelegationGate(deps: GateDeps = {}): HookCallback {
         return {};
       }
 
-      const verdict = await judgeFn(tools);
+      let verdict: JudgeVerdict | null = null;
+      try {
+        verdict = await judgeFn(tools);
+      } catch {
+        deps.onAudit?.({
+          ...base, layer: 'judge', verdict: 'allow', reason: 'judge_error', judgeCostUsd: null,
+        });
+        return {};
+      }
       if (!verdict || verdict.ok) {
         deps.onAudit?.({
           ...base, layer: 'judge', verdict: 'allow', reason: null,
@@ -184,7 +192,7 @@ export function createDelegationGate(deps: GateDeps = {}): HookCallback {
 
       return enabled ? { decision: 'block', reason } : {};
     } catch (err) {
-      await log.warn('gate.error', { error: String(err) });
+      void log.warn('gate.error', { error: String(err) }).catch(() => {});
       return {}; // fail-open
     }
   };

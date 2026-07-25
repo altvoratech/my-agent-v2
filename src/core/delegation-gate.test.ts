@@ -126,4 +126,23 @@ describe('createDelegationGate', () => {
       expect.objectContaining({ layer: 'deterministic', verdict: 'allow', heavyCount: 1 }),
     );
   });
+
+  it('anti-loop drena o acumulador (tools não vazam para o turno seguinte)', async () => {
+    const judgeFn = vi.fn();
+    const gate = createDelegationGate({ judgeFn });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    await gate(stopInput('sess-1', true), '', {} as never);   // anti-loop
+    expect(await gate(stopInput('sess-1'), '', {} as never)).toEqual({}); // turno seguinte vazio
+    expect(judgeFn).not.toHaveBeenCalled();                    // falharia se as tools tivessem vazado
+  });
+
+  it('turno pegajoso não sobe ao juiz', async () => {
+    const judgeFn = vi.fn();
+    const gate = createDelegationGate({ judgeFn });
+    recordTool('sess-1', 'Skill', false);
+    await gate(stopInput(), '', {} as never);                  // drena e arma o sticky
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+    expect(judgeFn).not.toHaveBeenCalled();
+  });
 });
