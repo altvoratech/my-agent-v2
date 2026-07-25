@@ -64,7 +64,7 @@ FROM delegation_audits GROUP BY layer, verdict;
 
 Perguntas que passam a ter resposta: em que fração dos ambíguos o juiz diz `ok:false`? Se for quase zero, `HEAVY_THRESHOLD = 6` está baixo demais; se for quase tudo, alto demais. Quanto custou o juiz no período?
 
-O `6` é herdado do `auditor de referência externo` e **nunca foi medido em lugar nenhum**.
+O `6` é herdado do auditor de referência e **nunca foi medido em lugar nenhum**.
 
 ---
 

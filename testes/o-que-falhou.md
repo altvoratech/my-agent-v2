@@ -38,7 +38,7 @@ Passou por 9 tarefas com revisão individual. **Só a revisão da branch inteira
 
 ## 3. Falso positivo do auditor, observado ao vivo
 
-Durante esta própria sessão, o um auditor de delegação externo bloqueou um turno alegando falta de delegação — **depois** de a skill `writing-plans` ter sido invocada e seguida.
+Durante esta própria sessão, o um auditor de delegação externo (implementação de referência em Python, fora deste repo) bloqueou um turno alegando falta de delegação — **depois** de a skill `writing-plans` ter sido invocada e seguida.
 
 Causa: o auditor localiza o último prompt do usuário e olha só as tool calls posteriores. Uma `Skill` invocada no turno N e *executada* no turno N+1 desaparece da janela; o N+1 parece trabalho pesado sem delegação.
 

@@ -21,7 +21,7 @@ const turns = new Map<string, string[]>();
 
 // Delegação pegajosa: uma Skill invocada no turno N é EXECUTADA no turno N+1.
 // Sem isto, o turno de execução parece trabalho pesado sem delegação — falso
-// positivo observado no auditor de referência externo em 2026-07-25 (spec §7 item 4).
+// positivo observado no auditor de referência externo em 2026-07-25.
 const stickyNext = new Set<string>();
 
 // Evict a entrada mais antiga (primeira inserida) quando o cap é excedido.

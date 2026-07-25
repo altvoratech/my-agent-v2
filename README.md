@@ -52,7 +52,7 @@ O **my-agent-v2** é um agente de engenharia de código que orquestra um conjunt
 | 💬 **Web chat rico** | `my-agent-chat` — streaming, raciocínio, diff, enhancer e mais ([abaixo](#-my-agent-chat-a-ui-web)) |
 | 🖥️ **TUI no terminal** | `my-agent-tui` — mesmo backend, no terminal: streaming, seletores de modelo/effort/tema, command palette ([abaixo](#-my-agent-tui-a-ui-no-terminal)) |
 | ⌨️ **CLI** | pergunta única às docs (guardião + RAG) |
-| 🚪 **Portão de delegação** | audita cada turno: leitura pesada sem delegar ao `explorer` sobe a um juiz haiku, que devolve a lacuna. Toda decisão é gravada em `delegation_audits` (SQLite) para calibração. Default = **observação** (grava sem bloquear); `DELEGATION_GATE=on` liga o bloqueio. |
+| 🚪 **Portão de delegação** | audita cada turno: leitura pesada sem delegar ao `explorer` sobe a um juiz haiku, que devolve a lacuna. Toda decisão é gravada em `delegation_audits` (SQLite) para calibração. Default = **observação** (grava sem bloquear); `DELEGATION_GATE=on` liga o bloqueio. ([detalhes](docs/portao-delegacao.md)) |
 
 ---
 
@@ -188,7 +188,7 @@ tui/              Cliente no terminal — OpenTUI + SolidJS (Bun)
   components/     DialogSelect (lista fuzzy reusável: modelo/effort/tema/comandos)
   screens/        ChatListScreen (lista) · ChatScreen (chat + dialogs + footer + slash)
 testes/           Documentação da suíte — inventário, o que provou, o que falhou, o que falta
-docs/superpowers/ Specs e planos de implementação (brainstorming → spec → plano → execução)
+docs/             ADRs, documentação do portão de delegação e screenshots
 ```
 
 > ⚙️ O TUI exige `bunfig.toml` com `preload = ["@opentui/solid/preload"]` — é o que liga o transform de

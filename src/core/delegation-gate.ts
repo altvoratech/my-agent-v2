@@ -1,6 +1,6 @@
 // Portão de delegação: audita, no fim do turno, se o agente principal fez
 // trabalho de leitura pesado SEM delegar ao subagente explorer (haiku).
-// Ver docs/superpowers/specs/2026-07-25-portao-delegacao-design.md
+// Ver docs/portao-delegacao.md
 
 import type { HookCallback, StopHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { query } from '@anthropic-ai/claude-agent-sdk';
@@ -16,7 +16,7 @@ export const HEAVY_TOOLS = new Set([
   'Read', 'Grep', 'Glob', 'Bash', 'Edit', 'Write', 'NotebookEdit',
 ]);
 
-/** Valor de partida herdado do auditor de referência externo. A medir, não presumir. */
+/** Valor de partida herdado de um auditor de referência externo. A medir, não presumir. */
 export const HEAVY_THRESHOLD = 6;
 
 /**
