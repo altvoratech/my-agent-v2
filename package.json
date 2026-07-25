@@ -1,4 +1,20 @@
 {
+  "name": "my-agent-v2",
+  "version": "2.0.0",
+  "description": "Agente de engenharia local sobre o Claude Agent SDK — web chat + TUI, RAG ancorado nas docs e guard de segurança em duas camadas.",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/altvoratech/my-agent-v2.git"
+  },
+  "homepage": "https://github.com/altvoratech/my-agent-v2#readme",
+  "bugs": {
+    "url": "https://github.com/altvoratech/my-agent-v2/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "bin": {
     "my-agent-tui": "bin/my-agent-tui"

@@ -313,6 +313,25 @@ npm run typecheck                              # tsc servidor (NodeNext) + clien
 
 ---
 
+## 🤝 Contribuindo
+
+PRs são bem-vindos. O detalhe que vale saber antes de qualquer coisa: **a suíte de testes roda offline** —
+sem Neon, sem Jina e sem chave de API.
+
+```bash
+npm install && npm test    # ~98 casos, ~200 ms, zero chamada de rede
+```
+
+Se a tua contribuição é no guard, no chunker, na UI ou em qualquer função pura, esse é o ciclo inteiro de
+desenvolvimento — credencial só entra para rodar o agente de verdade.
+
+O [CONTRIBUTING.md](CONTRIBUTING.md) cobre as invariantes do projeto (nenhum teste chama modelo, `src/core/`
+não importa de `web/`, imports com extensão `.ts`), o padrão de commit e onde a ajuda vale mais — hoje, o
+**motor multi-provider** ([ADR 0001](docs/adr/0001-motor-multi-provider.md)) e a **cobertura de teste** do RAG
+e do transporte WebSocket.
+
+---
+
 ## 🧰 Stack
 
 | Camada | Tecnologia |
