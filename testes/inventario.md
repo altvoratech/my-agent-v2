@@ -1,4 +1,4 @@
-# Inventário — 134 casos em 8 arquivos
+# Inventário — 138 casos em 8 arquivos
 
 ## Por área
 
@@ -6,7 +6,7 @@
 |---|---|---:|---|---|
 | Segurança | `src/core/guard.test.ts` | 20 | não | não |
 | RAG (chunking) | `src/rag/chunker.test.ts` | 27 | não | não |
-| Portão — unidade | `src/core/delegation-gate.test.ts` | 20 | não | não |
+| Portão — unidade | `src/core/delegation-gate.test.ts` | 24 | não | não |
 | Portão — acumulador | `src/core/turn-tracker.test.ts` | 7 | não | não |
 | Portão — hook | `src/core/hooks.test.ts` | 2 | não | não |
 | Portão — integração | `web/server/delegation-gate.integration.test.ts` | 6 | não (juiz stub) | SQLite `:memory:` |
@@ -39,10 +39,13 @@ O maior conjunto do projeto, e o mais antigo. Cobre `chunkMarkdown`/`splitUnits`
 
 ## `src/core/delegation-gate.test.ts` — 20 casos
 
-O núcleo do portão, em três blocos.
+O núcleo do portão, em quatro blocos.
 
 **`classifyTurn` — camada determinística (5)**
 Turno leve não é ambíguo · turno que delegou não é ambíguo mesmo pesado · `Skill` conta como delegação · pesado sem delegação é ambíguo · tools não-pesadas não contam para o limiar.
+
+**`countOf` — serialização canônica (4)**
+Mesma carga em ordens diferentes gera a mesma string · chaves em ordem alfabética · conta repetições · turno vazio vira `{}`. Verificados por mutação: sem o `.sort()`, três dos quatro falham.
 
 **`parseVerdict` — robustez do parsing (4)**
 Extrai JSON com texto em volta · devolve `null` sem JSON, com JSON malformado, e quando `ok` não é booleano.

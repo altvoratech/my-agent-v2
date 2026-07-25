@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { classifyTurn, HEAVY_THRESHOLD, parseVerdict, createDelegationGate, JUDGE_TIMEOUT_MS } from './delegation-gate.ts';
+import { classifyTurn, HEAVY_THRESHOLD, parseVerdict, createDelegationGate, JUDGE_TIMEOUT_MS, countOf } from './delegation-gate.ts';
 import { recordTool, resetAll } from './turn-tracker.ts';
 
 function stopInput(sessionId = 'sess-1', active = false) {
@@ -35,6 +35,25 @@ describe('classifyTurn', () => {
   it('tools não-pesadas não contam para o limiar', () => {
     const tools = Array(20).fill('TodoWrite');
     expect(classifyTurn(tools).ambiguous).toBe(false);
+  });
+});
+
+describe('countOf', () => {
+  it('mesma carga em ordens diferentes gera a MESMA string (canônico)', () => {
+    expect(countOf(['Read', 'Grep'])).toBe(countOf(['Grep', 'Read']));
+    expect(countOf(['Read', 'Bash', 'Read', 'Glob'])).toBe(countOf(['Glob', 'Read', 'Bash', 'Read']));
+  });
+
+  it('serializa as chaves em ordem alfabética', () => {
+    expect(countOf(['Read', 'Bash', 'Glob'])).toBe('{"Bash":1,"Glob":1,"Read":1}');
+  });
+
+  it('conta as repetições', () => {
+    expect(countOf(['Read', 'Read', 'Read', 'Grep'])).toBe('{"Grep":1,"Read":3}');
+  });
+
+  it('turno vazio vira objeto vazio', () => {
+    expect(countOf([])).toBe('{}');
   });
 });
 

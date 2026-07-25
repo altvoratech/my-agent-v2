@@ -166,13 +166,20 @@ export interface GateDeps {
   enabled?: boolean;
 }
 
-function countOf(tools: string[]): string {
-  return JSON.stringify(
-    tools.reduce<Record<string, number>>((acc, t) => {
-      acc[t] = (acc[t] ?? 0) + 1;
-      return acc;
-    }, {}),
-  );
+/** Contagem por tool, serializada com as chaves em ordem ALFABÉTICA.
+ *
+ * A ordenação é o que torna o valor canônico: sem ela, `[Read, Grep]` e
+ * `[Grep, Read]` — a mesma carga de trabalho — geram strings diferentes, e
+ * qualquer `GROUP BY toolCounts` fragmenta em linhas que deviam ser uma só.
+ * O propósito da tabela `delegation_audits` é justamente ser agrupada. */
+export function countOf(tools: string[]): string {
+  const counts = tools.reduce<Record<string, number>>((acc, t) => {
+    acc[t] = (acc[t] ?? 0) + 1;
+    return acc;
+  }, {});
+  const canonical: Record<string, number> = {};
+  for (const name of Object.keys(counts).sort()) canonical[name] = counts[name];
+  return JSON.stringify(canonical);
 }
 
 export function createDelegationGate(deps: GateDeps = {}): HookCallback {

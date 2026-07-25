@@ -10,7 +10,7 @@ Registro do que é testado, do que já falhou de verdade, e do que falta.
 | Runner | Vitest 4 (`environment: node`) |
 | Comando | `npm test` · `npm run test:watch` |
 | Arquivos | 8 |
-| Casos | **134**, todos passando |
+| Casos | **138**, todos passando |
 | Cobertura por chamada de modelo | **zero** — nenhum teste da suíte padrão chama LLM |
 | Verificação com modelo real | `npm run e2e:portao` (opt-in, gasta token, **nunca executado**) |
 

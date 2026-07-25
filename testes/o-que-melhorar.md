@@ -70,11 +70,9 @@ O `6` é herdado do auditor de referência e **nunca foi medido em lugar nenhum*
 
 ## Bloco 3 — Dívida conhecida
 
-### 3.1 `countOf` não é canônico *(corrigir antes de acumular dados)*
+### 3.1 ~~`countOf` não é canônico~~ *(corrigido)*
 
-`[Read, Grep]` gera `{"Read":1,"Grep":1}` e `[Grep, Read]` gera `{"Grep":1,"Read":1}`. Mesma carga, duas strings — qualquer `GROUP BY toolCounts` futuro fragmenta.
-
-Uma linha (`Object.keys(x).sort()`), e é melhor fazer **antes** que os dados sujos acumulem, já que o propósito da tabela é ser agrupada.
+Corrigido em 2026-07-25, antes de qualquer dado ser acumulado: `countOf` ordena as chaves com `Object.keys().sort()` antes do `JSON.stringify`, então `[Read, Grep]` e `[Grep, Read]` passam a gerar a mesma string e um `GROUP BY toolCounts` não fragmenta mais. Coberto por 4 casos, verificados por mutação — sem o `.sort()`, três falham.
 
 ### 3.2 Falha silenciosa por chave estrangeira
 
