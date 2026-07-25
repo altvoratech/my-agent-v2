@@ -19,6 +19,15 @@ export const HEAVY_TOOLS = new Set([
 /** Valor de partida herdado do auditor de referência externo. A medir, não presumir. */
 export const HEAVY_THRESHOLD = 6;
 
+/**
+ * Deadline do juiz (C1 da revisão final). Duas redes independentes:
+ * 1. Dentro de judge(): AbortController aborta o query() do SDK ao estourar o prazo.
+ * 2. Dentro do gate: Promise.race entre a chamada a judgeFn (real ou injetada em
+ *    teste) e um timer — cobre qualquer judgeFn que pendure, mesmo que ela não
+ *    respeite AbortController nenhum (ex: dublê de teste). Estourou -> null -> libera.
+ */
+export const JUDGE_TIMEOUT_MS = 8_000;
+
 export interface TurnClassification {
   heavy: number;
   delegated: boolean;
@@ -76,6 +85,10 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
   }, {});
   const summary = Object.entries(counts).map(([n, c]) => `${n}x${c}`).join(', ');
 
+  // Rede 1: AbortController com deadline próprio, passado ao query() do SDK.
+  const abortController = new AbortController();
+  const abortTimer = setTimeout(() => abortController.abort(), JUDGE_TIMEOUT_MS);
+
   try {
     let text = '';
     let costUsd: number | undefined;
@@ -84,14 +97,17 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
         `FERRAMENTAS USADAS NO TURNO (lista real): ${summary}\n` +
         `Total de tool calls: ${tools.length}. Delegou (Agent/Task/Skill)? NÃO.\n\n` +
         `Decida se devia ter delegado. Responda só o JSON.`,
-      options: buildAgentOptions({
-        prompt: JUDGE_SYSTEM,
-        rawPrompt: true,
-        model: 'haiku',
-        maxTurns: 1,
-        allowedTools: [],
-        settingSources: [], // agente limpo: sem MCP/skills do usuário
-      }),
+      options: {
+        ...buildAgentOptions({
+          prompt: JUDGE_SYSTEM,
+          rawPrompt: true,
+          model: 'haiku',
+          maxTurns: 1,
+          allowedTools: [],
+          settingSources: [], // agente limpo: sem MCP/skills do usuário
+        }),
+        abortController,
+      },
     })) {
       if (msg.type === 'assistant') {
         for (const block of msg.message.content) {
@@ -105,8 +121,23 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
     return verdict ? { ...verdict, costUsd } : null;
   } catch (err) {
     await log.warn('gate.judge_error', { error: String(err) });
-    return null; // fail-open
+    return null; // fail-open (inclui abort por timeout)
+  } finally {
+    clearTimeout(abortTimer);
   }
+}
+
+/** Corre `promise` contra um timer; estourou o prazo -> resolve null (fail-open).
+ * Rede 2 do C1: cobre qualquer judgeFn (real ou dublê de teste) que pendure,
+ * independente do AbortController interno de judge(). */
+function raceWithDeadline<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise<T | null>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
 }
 
 export interface DelegationAuditInput {
@@ -169,7 +200,7 @@ export function createDelegationGate(deps: GateDeps = {}): HookCallback {
 
       let verdict: JudgeVerdict | null = null;
       try {
-        verdict = await judgeFn(tools);
+        verdict = await raceWithDeadline(judgeFn(tools), JUDGE_TIMEOUT_MS);
       } catch {
         deps.onAudit?.({
           ...base, layer: 'judge', verdict: 'allow', reason: 'judge_error', judgeCostUsd: null,

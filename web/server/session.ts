@@ -36,6 +36,7 @@ export class Session {
       (qs) => this.requestQuestion(qs),
       cwd,
       effort,
+      this.chatId,
     );
     this.pendingHistory = history && history.length ? history : undefined;
   }
@@ -107,6 +108,7 @@ export class Session {
         (qs) => this.requestQuestion(qs),
         this.cwd,
         this.effort,
+        this.chatId,
       );
     }
   }

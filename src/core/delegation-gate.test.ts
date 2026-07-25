@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { classifyTurn, HEAVY_THRESHOLD, parseVerdict, createDelegationGate } from './delegation-gate.ts';
+import { classifyTurn, HEAVY_THRESHOLD, parseVerdict, createDelegationGate, JUDGE_TIMEOUT_MS } from './delegation-gate.ts';
 import { recordTool, resetAll } from './turn-tracker.ts';
 
 function stopInput(sessionId = 'sess-1', active = false) {
@@ -134,6 +134,20 @@ describe('createDelegationGate', () => {
     await gate(stopInput('sess-1', true), '', {} as never);   // anti-loop
     expect(await gate(stopInput('sess-1'), '', {} as never)).toEqual({}); // turno seguinte vazio
     expect(judgeFn).not.toHaveBeenCalled();                    // falharia se as tools tivessem vazado
+  });
+
+  it('juiz que nunca resolve libera dentro do prazo (C1: fail-open no timeout)', async () => {
+    vi.useFakeTimers();
+    try {
+      const judgeFn = vi.fn(() => new Promise<never>(() => {})); // pendura pra sempre
+      const gate = createDelegationGate({ judgeFn });
+      for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+      const out = gate(stopInput(), '', {} as never);
+      await vi.advanceTimersByTimeAsync(JUDGE_TIMEOUT_MS);
+      expect(await out).toEqual({});
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('turno pegajoso não sobe ao juiz', async () => {

@@ -59,7 +59,7 @@ export class AgentSession {
   private q: ReturnType<typeof query>;
   private outputIterator: AsyncIterator<any>;
 
-  constructor(model = 'claude-sonnet-4-6', onApproval?: ApprovalFn, onQuestion?: QuestionFn, cwd = process.cwd(), effort?: string) {
+  constructor(model = 'claude-sonnet-4-6', onApproval?: ApprovalFn, onQuestion?: QuestionFn, cwd = process.cwd(), effort?: string, chatId: string | null = null) {
     // a config do agente vem do domínio; aqui só plugamos a fila (transporte).
     this.q = query({
       prompt: this.queue as any,
@@ -67,7 +67,7 @@ export class AgentSession {
         model, cwd, effort, onApproval, onQuestion,
         onAudit: (row) => recordDelegationAudit({
           id: uuidv4(),
-          chatId: null,
+          chatId,
           createdAt: new Date().toISOString(),
           ...row,
         }),

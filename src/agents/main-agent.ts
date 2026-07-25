@@ -65,10 +65,12 @@ export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuesti
       ...createGuardedHooks(cwd, { askOnMutate: true }),
       // Portão de delegação. DELEGATION_GATE=on liga o bloqueio; o default é
       // modo OBSERVAÇÃO: grava toda decisão sem interferir no turno.
+      // timeout (segundos): segunda rede contra o juiz pendurar o fim do turno
+      // (C1 da revisão final) — a primeira é o deadline interno do próprio judge().
       Stop: [{ hooks: [createDelegationGate({
         onAudit,
         enabled: process.env.DELEGATION_GATE === 'on',
-      })] }],
+      })], timeout: 10 }],
     },
     canUseTool: async (toolName, input) => {
       // Perguntas de esclarecimento: o SDK resolve AskUserQuestion AQUI, não no stream.

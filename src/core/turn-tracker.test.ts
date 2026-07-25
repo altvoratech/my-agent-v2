@@ -31,6 +31,23 @@ describe('turn-tracker', () => {
     expect(takeTurn('s1').tools).toEqual([]);
   });
 
+  it('I1: cap por sessão — guarda só as últimas 200 tools', () => {
+    for (let i = 0; i < 205; i++) recordTool('s1', `Tool${i}`, false);
+    const { tools } = takeTurn('s1');
+    expect(tools.length).toBe(200);
+    expect(tools[0]).toBe('Tool5'); // as 5 mais antigas caíram fora
+    expect(tools[tools.length - 1]).toBe('Tool204');
+  });
+
+  it('I1: cap de sessões rastreadas — evict da mais antiga acima de 50', () => {
+    for (let i = 0; i < 55; i++) recordTool(`sess-${i}`, 'Read', false);
+    // as 5 primeiras (sess-0..sess-4) devem ter sido evictadas
+    expect(takeTurn('sess-0').tools).toEqual([]);
+    expect(takeTurn('sess-4').tools).toEqual([]);
+    // a mais recente sobrevive
+    expect(takeTurn('sess-54').tools).toEqual(['Read']);
+  });
+
   it('delegação é pegajosa por um turno (Skill executa no turno seguinte)', () => {
     recordTool('s1', 'Skill', false);
     expect(takeTurn('s1').stickyDelegation).toBe(false); // o próprio turno já tem a tool
