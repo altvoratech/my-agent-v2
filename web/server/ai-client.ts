@@ -3,7 +3,9 @@
 // turno vivo. A DEFINIÇÃO do agente (system prompt, tools, subagentes, política de
 // aprovação) vive em src/agents/main-agent.ts e é injetada via buildMainAgentOptions.
 import { query } from '@anthropic-ai/claude-agent-sdk';
+import { v4 as uuidv4 } from 'uuid';
 import { buildMainAgentOptions, type ApprovalFn, type QuestionFn, type AskQuestionItem } from '../../src/agents/main-agent.ts';
+import { recordDelegationAudit } from './chat-store.ts';
 
 export type { ApprovalFn, QuestionFn, AskQuestionItem }; // re-export p/ quem importa daqui
 
@@ -61,7 +63,15 @@ export class AgentSession {
     // a config do agente vem do domínio; aqui só plugamos a fila (transporte).
     this.q = query({
       prompt: this.queue as any,
-      options: buildMainAgentOptions({ model, cwd, effort, onApproval, onQuestion }),
+      options: buildMainAgentOptions({
+        model, cwd, effort, onApproval, onQuestion,
+        onAudit: (row) => recordDelegationAudit({
+          id: uuidv4(),
+          chatId: null,
+          createdAt: new Date().toISOString(),
+          ...row,
+        }),
+      }),
     });
     this.outputIterator = this.q[Symbol.asyncIterator]();
   }
