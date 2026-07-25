@@ -95,8 +95,9 @@ delegação que ele existe para incentivar.
 
 Nenhum caminho do portão pode travar, atrasar ou derrubar um turno. Juiz que
 lança, devolve `null`, devolve lixo ou **nunca responde** (há `AbortController`
-de 8 s, `Promise.race` no gate e `timeout: 10` no matcher) sempre resulta em
-liberar o turno.
+de 30 s, `Promise.race` no gate e `timeout: 35` no matcher) sempre resulta em
+liberar o turno. O caso "nunca responde" não é hipotético — ver
+[a reentrância](#a-reentrância-cobra-caro-e-às-vezes-trava).
 
 ---
 

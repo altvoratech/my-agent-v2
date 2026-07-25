@@ -30,7 +30,7 @@ A restrição global mais importante do portão — nenhum caminho pode travar, 
 | Juiz devolve lixo (sem JSON, JSON quebrado, `ok` não-booleano) | `parseVerdict` → `null` → libera |
 | **Juiz nunca resolve** | libera dentro do prazo, com fake timers |
 
-O último (C1) só existe porque a revisão final o cobrou: o timeout estava nomeado no spec e não tinha sido implementado nem testado. Hoje há `AbortController` de 8 s no `query()`, `Promise.race` no gate cobrindo qualquer `judgeFn` injetada, e `timeout: 10` no matcher do `Stop` como segunda rede.
+O último (C1) só existe porque a revisão final o cobrou: o timeout estava nomeado no spec e não tinha sido implementado nem testado. Hoje há `AbortController` de 30 s no `query()`, `Promise.race` no gate cobrindo qualquer `judgeFn` injetada, e `timeout: 35` no matcher do `Stop` como segunda rede. Os valores originais eram 8 s e 10 s — e abortavam o juiz em **toda** chamada real, coisa que só a primeira execução do e2e revelou (ver [o-que-falhou.md](o-que-falhou.md)).
 
 ## 4. Dois testes provam ordem, não só resultado
 

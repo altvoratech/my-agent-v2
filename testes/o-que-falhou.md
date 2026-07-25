@@ -97,11 +97,27 @@ Registrado, **não corrigido** — a decisão é do dono.
 
 ---
 
-## 8. O caminho de produção do juiz nunca rodou
+## 8. A camada 2 nunca funcionou — e o fail-open escondia
 
-Todos os 134 testes usam `judgeFn` mockado. O script `scripts/e2e-portao.ts` existe para cobrir isso e **nunca foi executado**.
+Executado em 2026-07-25. Os 134 testes usam `judgeFn` mockado; o `scripts/e2e-portao.ts` foi rodado pela primeira vez e derrubou duas suposições.
 
-Isso significa que a chamada haiku real, feita de dentro de um hook `Stop` que por sua vez roda dentro de outro `query()` — reentrância — nunca aconteceu. O primeiro turno ambíguo real será a estreia.
+**Primeiro**, o script se recusava a rodar: exigia `ANTHROPIC_API_KEY` e não existe nenhuma na máquina. A aplicação sempre autenticou pelo OAuth da assinatura em `~/.claude/.credentials.json`. O portão de credencial era mais estrito que a própria aplicação.
+
+**Segundo**, com o bloqueio removido, o juiz foi abortado aos 8 s — o valor de `JUDGE_TIMEOUT_MS`. Medição em três rodadas:
+
+| Contexto | Tempo |
+|---|---|
+| a mesma chamada haiku, isolada | ~2 s |
+| de dentro do hook `Stop` de um `query()` vivo | 17–23 s |
+| 1 rodada em 3 | não respondeu em 90 s |
+
+A reentrância custa de 8 a 11×, e às vezes trava de vez. **Os 8 s nunca tiveram chance.**
+
+O mais grave é o modo de falha: fail-open funcionou perfeitamente e mascarou tudo. Uma semana em observação teria produzido só linhas `layer=judge, verdict=allow, reason=null` — a conclusão errada de que o agente delega bem, apoiada em dado que parecia bom.
+
+**Lição:** um caminho que só é exercitado em produção e falha *aberto* não gera alarme nenhum. Ele gera dado silenciosamente vazio. Fail-open protege o turno e esconde o defeito — a contrapartida precisa ser medir o caminho real pelo menos uma vez.
+
+Com 30 s, o portão funcionou ponta a ponta pela primeira vez: veredito `block` com a lacuna escrita, a US$ 0,008–0,013 por julgamento.
 
 ---
 
