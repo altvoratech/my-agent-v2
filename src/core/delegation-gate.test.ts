@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyTurn, HEAVY_THRESHOLD } from './delegation-gate.ts';
+import { classifyTurn, HEAVY_THRESHOLD, parseVerdict } from './delegation-gate.ts';
 
 describe('classifyTurn', () => {
   it('turno leve não é ambíguo', () => {
@@ -24,5 +24,23 @@ describe('classifyTurn', () => {
   it('tools não-pesadas não contam para o limiar', () => {
     const tools = Array(20).fill('TodoWrite');
     expect(classifyTurn(tools).ambiguous).toBe(false);
+  });
+});
+
+describe('parseVerdict', () => {
+  it('extrai JSON mesmo com texto em volta', () => {
+    expect(parseVerdict('Claro!\n{"ok": false, "reason": "delegue"}\n')).toEqual({ ok: false, reason: 'delegue' });
+  });
+
+  it('devolve null para resposta sem JSON', () => {
+    expect(parseVerdict('não sei')).toBeNull();
+  });
+
+  it('devolve null para JSON malformado', () => {
+    expect(parseVerdict('{"ok": tru')).toBeNull();
+  });
+
+  it('devolve null quando ok não é booleano', () => {
+    expect(parseVerdict('{"ok": "sim"}')).toBeNull();
   });
 });
