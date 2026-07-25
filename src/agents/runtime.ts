@@ -39,6 +39,8 @@ export interface AgentSpec {
   agents?: AgentOptions['agents'];
   /** gate de aprovação humana (human-in-the-loop) */
   canUseTool?: AgentOptions['canUseTool'];
+  /** fontes de settings carregadas (ex: [] = agente limpo, sem MCP/skills do usuário) */
+  settingSources?: AgentOptions['settingSources'];
 }
 
 export function buildAgentOptions(spec: AgentSpec): AgentOptions {
@@ -58,5 +60,6 @@ export function buildAgentOptions(spec: AgentSpec): AgentOptions {
     ...(spec.mcpServers ? { mcpServers: spec.mcpServers } : {}),
     ...(spec.agents ? { agents: spec.agents } : {}),
     ...(spec.canUseTool ? { canUseTool: spec.canUseTool } : {}),
+    ...(spec.settingSources ? { settingSources: spec.settingSources } : {}),
   };
 }

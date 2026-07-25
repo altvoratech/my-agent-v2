@@ -52,6 +52,7 @@ O **my-agent-v2** é um agente de engenharia de código que orquestra um conjunt
 | 💬 **Web chat rico** | `my-agent-chat` — streaming, raciocínio, diff, enhancer e mais ([abaixo](#-my-agent-chat-a-ui-web)) |
 | 🖥️ **TUI no terminal** | `my-agent-tui` — mesmo backend, no terminal: streaming, seletores de modelo/effort/tema, command palette ([abaixo](#-my-agent-tui-a-ui-no-terminal)) |
 | ⌨️ **CLI** | pergunta única às docs (guardião + RAG) |
+| 🚪 **Portão de delegação** | audita cada turno: leitura pesada sem delegar ao `explorer` sobe a um juiz haiku, que devolve a lacuna. Toda decisão é gravada em `delegation_audits` (SQLite) para calibração. Default = **observação** (grava sem bloquear); `DELEGATION_GATE=on` liga o bloqueio. |
 
 ---
 
@@ -164,7 +165,9 @@ src/
     consultor.ts            Expõe o guardião como MCP server in-process (consultar_guardian)
   core/
     guard.ts      Hook PreToolUse — veta destrutivo; askOnMutate → roteia Write/Edit/Bash ao canUseTool
-    hooks.ts      Tracking de toda tool call (logger)
+    hooks.ts      Tracking de toda tool call (logger) + alimenta o acumulador de turno
+    turn-tracker.ts     Acumula as tools do turno (ignora chamadas de dentro de subagente)
+    delegation-gate.ts  Hook Stop — portão de delegação: camada determinística + juiz haiku
     logger.ts     Log JSONL + .log legível + EventEmitter (para a UI)
 web/
   server/         Express + WebSocket
@@ -184,6 +187,8 @@ tui/              Cliente no terminal — OpenTUI + SolidJS (Bun)
   parsers-config.ts    Linguagens extras via tree-sitter WASM (Python/Rust/Go/Bash/C/C++/JSON/YAML/TOML)
   components/     DialogSelect (lista fuzzy reusável: modelo/effort/tema/comandos)
   screens/        ChatListScreen (lista) · ChatScreen (chat + dialogs + footer + slash)
+testes/           Documentação da suíte — inventário, o que provou, o que falhou, o que falta
+docs/superpowers/ Specs e planos de implementação (brainstorming → spec → plano → execução)
 ```
 
 > ⚙️ O TUI exige `bunfig.toml` com `preload = ["@opentui/solid/preload"]` — é o que liga o transform de
@@ -313,17 +318,41 @@ npm run typecheck                              # tsc servidor (NodeNext) + clien
 
 ---
 
-## 🤝 Contribuindo
-
-PRs são bem-vindos. O detalhe que vale saber antes de qualquer coisa: **a suíte de testes roda offline** —
-sem Neon, sem Jina e sem chave de API.
+## 🧪 Testes
 
 ```bash
-npm install && npm test    # ~98 casos, ~200 ms, zero chamada de rede
+npm test               # suíte completa — 134 casos, ~360 ms, zero chamada de modelo
+npm run test:watch     # modo watch (Vitest)
+npm run e2e:portao     # opt-in: exercita o juiz haiku de verdade (gasta token)
 ```
 
-Se a tua contribuição é no guard, no chunker, na UI ou em qualquer função pura, esse é o ciclo inteiro de
-desenvolvimento — credencial só entra para rodar o agente de verdade.
+A suíte padrão é determinística e offline por princípio: **nenhum teste chama LLM**. A lógica decisória é
+extraída para função pura (`classifyTurn`, `parseVerdict`, `chunkMarkdown`, `groupConsecutive`) e as
+dependências caras entram por **injeção** (`judgeFn`, `onAudit`) — o mesmo mecanismo que mantém `src/core/`
+livre de `web/`. O que exige modelo real vive num script opt-in, fora do `npm test`.
+
+O diretório [`testes/`](testes/) documenta o estado real da verificação — não só o que passa:
+
+| Documento | O que responde |
+|---|---|
+| [testes/README.md](testes/README.md) | Panorama, comandos e os princípios em vigor |
+| [testes/inventario.md](testes/inventario.md) | O que existe hoje, arquivo por arquivo, caso por caso — **e o que não tem teste nenhum** |
+| [testes/o-que-deu-certo.md](testes/o-que-deu-certo.md) | O que a suíte de fato prova, e por que se pode confiar nela |
+| [testes/o-que-falhou.md](testes/o-que-falhou.md) | Falhas reais: bugs, testes que passavam com a implementação errada, e o que só apareceu em produção |
+| [testes/o-que-melhorar.md](testes/o-que-melhorar.md) | Lacunas, dívida conhecida e decisões pendentes, priorizadas |
+
+> ⚠️ Cobertura honesta: o **RAG inteiro** (`guardian.ts`, `consultor.ts`), o transporte WebSocket
+> (`session.ts`, `ai-client.ts`) e o TUI **não têm teste**. A lista completa está no
+> [inventário](testes/inventario.md#o-que-não-tem-teste-nenhum).
+
+---
+
+## 🤝 Contribuindo
+
+PRs são bem-vindos. O detalhe que vale saber antes de qualquer coisa está logo acima: **a suíte roda
+offline** — sem Neon, sem Jina e sem chave de API. Se a tua contribuição é no guard, no chunker, no portão,
+na UI ou em qualquer função pura, `npm install && npm test` é o ciclo inteiro de desenvolvimento; credencial
+só entra para rodar o agente de verdade.
 
 O [CONTRIBUTING.md](CONTRIBUTING.md) cobre as invariantes do projeto (nenhum teste chama modelo, `src/core/`
 não importa de `web/`, imports com extensão `.ts`), o padrão de commit e onde a ajuda vale mais — hoje, o
@@ -344,6 +373,7 @@ e do transporte WebSocket.
 | Cliente web | React 18 + Vite 5 + Tailwind 3 · react-markdown · **Shiki** · **lucide-react** · **sonner** · react-textarea-autosize |
 | Cliente terminal | **OpenTUI** (core Zig) + **SolidJS** · rodado com **Bun** |
 | Runtime | tsx (ESM) para web/CLI · Bun para o TUI |
+| Testes | **Vitest 4** (`environment: node`) — ver [`testes/`](testes/) |
 
 ---
 

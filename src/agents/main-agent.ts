@@ -9,6 +9,7 @@
 import { consultorServer, CONSULTOR_TOOL } from './consultor.ts';
 import { subagents } from './subagents.ts';
 import { createGuardedHooks } from '../core/guard.ts';
+import { createDelegationGate, type DelegationAuditInput } from '../core/delegation-gate.ts';
 import { buildAgentOptions } from './runtime.ts';
 import { loadPrompt } from '../prompts/loader.ts';
 
@@ -38,12 +39,13 @@ export interface MainAgentParams {
   effort?: string;
   onApproval?: ApprovalFn;
   onQuestion?: QuestionFn;
+  onAudit?: (row: DelegationAuditInput) => void;
 }
 
 // Monta as `options` do query() do agente principal (tudo menos o prompt/queue — isso é
 // transporte). Recebe o onApproval (callback que pergunta ao browser) por injeção.
 // O scaffolding comum (preset, permissionMode, stream) vem de buildAgentOptions.
-export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuestion }: MainAgentParams) {
+export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuestion, onAudit }: MainAgentParams) {
   return buildAgentOptions({
     model,
     cwd,
@@ -59,7 +61,17 @@ export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuesti
     // canUseTool, onde a pergunta é resolvida (user-input.md). Pré-aprovar pularia isso.
     allowedTools: ['Read', 'Glob', 'Grep', 'TodoWrite', 'Agent', 'Task', CONSULTOR_TOOL],
     // guard veta o destrutivo e encaminha mutações ao canUseTool (askOnMutate)
-    hooks: createGuardedHooks(cwd, { askOnMutate: true }),
+    hooks: {
+      ...createGuardedHooks(cwd, { askOnMutate: true }),
+      // Portão de delegação. DELEGATION_GATE=on liga o bloqueio; o default é
+      // modo OBSERVAÇÃO: grava toda decisão sem interferir no turno.
+      // timeout (segundos): segunda rede contra o juiz pendurar o fim do turno
+      // (C1 da revisão final) — a primeira é o deadline interno do próprio judge().
+      Stop: [{ hooks: [createDelegationGate({
+        onAudit,
+        enabled: process.env.DELEGATION_GATE === 'on',
+      })], timeout: 10 }],
+    },
     canUseTool: async (toolName, input) => {
       // Perguntas de esclarecimento: o SDK resolve AskUserQuestion AQUI, não no stream.
       // Transmitimos as questions ao browser, esperamos a resposta e devolvemos

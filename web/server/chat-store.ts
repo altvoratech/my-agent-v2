@@ -43,6 +43,23 @@ db.exec(`
     path         TEXT PRIMARY KEY,
     lastOpenedAt TEXT NOT NULL
   );
+
+  -- Auditoria do portão de delegação: toda decisão, inclusive as que liberam.
+  -- É o que permite calibrar HEAVY_THRESHOLD com dado em vez de chute.
+  CREATE TABLE IF NOT EXISTS delegation_audits (
+    id           TEXT PRIMARY KEY,
+    chatId       TEXT REFERENCES chats(id) ON DELETE CASCADE,
+    createdAt    TEXT NOT NULL,
+    toolCounts   TEXT NOT NULL,
+    heavyCount   INTEGER NOT NULL,
+    delegated    INTEGER NOT NULL,
+    layer        TEXT NOT NULL,
+    verdict      TEXT NOT NULL,
+    reason       TEXT,
+    judgeCostUsd REAL,
+    followedUp   INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_audits_chat ON delegation_audits(chatId, createdAt);
 `);
 
 // Migração: coluna `images` (JSON com as URLs /uploads/...). Bancos antigos não têm.
@@ -179,3 +196,33 @@ class ChatStore {
 }
 
 export const chatStore = new ChatStore();
+
+export interface DelegationAuditRow {
+  id: string;
+  chatId: string | null;
+  createdAt: string;
+  toolCounts: string;
+  heavyCount: number;
+  delegated: 0 | 1;
+  layer: 'deterministic' | 'judge';
+  verdict: 'allow' | 'block';
+  reason: string | null;
+  judgeCostUsd: number | null;
+}
+
+const insertAudit = db.prepare(`
+  INSERT INTO delegation_audits
+    (id, chatId, createdAt, toolCounts, heavyCount, delegated, layer, verdict, reason, judgeCostUsd)
+  VALUES
+    (@id, @chatId, @createdAt, @toolCounts, @heavyCount, @delegated, @layer, @verdict, @reason, @judgeCostUsd)
+`);
+
+export function recordDelegationAudit(row: DelegationAuditRow): void {
+  insertAudit.run(row);
+}
+
+export function listDelegationAudits(chatId: string | null): DelegationAuditRow[] {
+  return chatId
+    ? (db.prepare('SELECT * FROM delegation_audits WHERE chatId = ? ORDER BY createdAt').all(chatId) as DelegationAuditRow[])
+    : (db.prepare('SELECT * FROM delegation_audits ORDER BY createdAt').all() as DelegationAuditRow[]);
+}

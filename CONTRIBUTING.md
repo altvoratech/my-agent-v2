@@ -12,12 +12,16 @@ Este é o ponto que costuma surpreender. A suíte de testes roda **offline**:
 
 ```bash
 npm install
-npm test        # ~98 casos, ~200 ms, zero chamada de rede
+npm test        # 134 casos, ~340 ms, zero chamada de rede
 ```
 
 Sem Neon, sem Jina, sem chave da Anthropic. Se a tua contribuição é no guard de
-segurança, no chunker do RAG, na lógica da UI ou em qualquer função pura, esse é
-o ciclo inteiro de desenvolvimento.
+segurança, no chunker do RAG, no portão de delegação, na lógica da UI ou em
+qualquer função pura, esse é o ciclo inteiro de desenvolvimento.
+
+O diretório [`testes/`](testes/) documenta o que a suíte prova, o que já falhou
+de verdade e o que ainda não tem cobertura — vale ler antes de escrever teste
+novo.
 
 Credencial só é necessária para **executar o agente de verdade**:
 
@@ -53,7 +57,7 @@ projeto; um PR que as quebre vai ser pedido de volta.
 **1. Nenhum teste da suíte padrão chama modelo.**
 Determinismo e velocidade acima de fidelidade — uma suíte de 20 segundos deixa
 de ser rodada, e uma que não é rodada não protege nada. O que exige modelo real
-vive num script opt-in, fora do `npm test`.
+vive num script opt-in (`npm run e2e:portao`), fora do `npm test`.
 
 **2. Lógica decisória mora em função pura.**
 Quando algo é difícil de testar, o sinal é que a fronteira está no lugar errado.
