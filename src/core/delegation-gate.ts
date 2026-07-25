@@ -26,7 +26,12 @@ export const HEAVY_THRESHOLD = 6;
  *    teste) e um timer — cobre qualquer judgeFn que pendure, mesmo que ela não
  *    respeite AbortController nenhum (ex: dublê de teste). Estourou -> null -> libera.
  */
-export const JUDGE_TIMEOUT_MS = 8_000;
+/** Prazo do juiz. MEDIDO em 2026-07-25 com o e2e real: a mesma chamada leva
+ * ~2 s isolada e 17-23 s quando feita de dentro do hook Stop de outro query()
+ * — a reentrância custa 8-11x. Os 8 s originais abortavam sempre. 30 s cobre o
+ * caso que funciona e corta o que trava (1 de 3 rodadas passou de 90 s).
+ * Ajustável por env para medir de novo sem editar código. */
+export const JUDGE_TIMEOUT_MS = Number(process.env.JUDGE_TIMEOUT_MS ?? 30_000);
 
 export interface TurnClassification {
   heavy: number;
@@ -84,6 +89,7 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
     return acc;
   }, {});
   const summary = Object.entries(counts).map(([n, c]) => `${n}x${c}`).join(', ');
+  const t0 = Date.now();
 
   // Rede 1: AbortController com deadline próprio, passado ao query() do SDK.
   const abortController = new AbortController();
@@ -117,10 +123,11 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
         costUsd = msg.total_cost_usd;
       }
     }
+    await log.info('gate.judge_ms', { ms: Date.now() - t0, ok: text.length > 0 });
     const verdict = parseVerdict(text);
     return verdict ? { ...verdict, costUsd } : null;
   } catch (err) {
-    await log.warn('gate.judge_error', { error: String(err) });
+    await log.warn('gate.judge_error', { error: String(err), ms: Date.now() - t0 });
     return null; // fail-open (inclui abort por timeout)
   } finally {
     clearTimeout(abortTimer);

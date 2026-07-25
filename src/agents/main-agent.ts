@@ -70,7 +70,7 @@ export function buildMainAgentOptions({ model, cwd, effort, onApproval, onQuesti
       Stop: [{ hooks: [createDelegationGate({
         onAudit,
         enabled: process.env.DELEGATION_GATE === 'on',
-      })], timeout: 10 }],
+      })], timeout: Number(process.env.STOP_HOOK_TIMEOUT_S ?? 35) }],
     },
     canUseTool: async (toolName, input) => {
       // Perguntas de esclarecimento: o SDK resolve AskUserQuestion AQUI, não no stream.

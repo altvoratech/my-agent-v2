@@ -138,11 +138,32 @@ Quatro pontos abertos, documentados em
 `HEAVY_TOOLS` incluir `Bash`/`Edit`/`Write` (que sozinhos somam mais da metade
 das chamadas medidas) e o juiz decidir sem receber o pedido original do usuário.
 
-E o caminho de produção do juiz **nunca rodou**: todos os testes da suíte usam
-`judgeFn` mockado. Quem quiser exercitar a chamada haiku real:
+### A reentrância cobra caro, e às vezes trava
+
+Medido em 2026-07-25 pelo `npm run e2e:portao`, a única verificação que exercita
+o juiz de verdade (os testes da suíte usam `judgeFn` mockado):
+
+| Contexto | Tempo |
+|---|---|
+| a mesma chamada haiku, isolada | ~2 s |
+| de dentro do hook `Stop` de um `query()` vivo | **17–23 s** |
+| uma rodada em três | **não respondeu em 90 s** |
+
+Chamar `query()` de dentro de um hook de outro `query()` custa de 8 a 11× — e em
+parte das vezes não retorna. Por isso `JUDGE_TIMEOUT_MS` é 30 s (era 8 s, que
+abortava sempre) e o matcher do `Stop` tem 35 s. Ambos ajustáveis por variável de
+ambiente (`JUDGE_TIMEOUT_MS`, `STOP_HOOK_TIMEOUT_S`) para remedir sem editar
+código.
+
+O custo por julgamento ficou entre **US$ 0,008 e US$ 0,013**.
+
+**Consequência em aberto:** num turno que trava, o portão adiciona 30 s de espera
+para não produzir nada. Como o modo default é observação — onde o veredito não
+altera o turno — o juiz não precisaria bloquear o fechamento. Rodá-lo de forma
+assíncrona eliminaria a latência e tornaria o travamento inofensivo.
 
 ```bash
-npm run e2e:portao   # opt-in, gasta token
+npm run e2e:portao   # opt-in, gasta token (~US$ 0,15 por rodada, os dois modelos)
 ```
 
 ### O guardião RAG ficou deliberadamente de fora
