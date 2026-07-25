@@ -133,6 +133,8 @@ const SIDEBAR_W = 30
 // Fonte: docs Anthropic "Context windows" (jul/2026) — Opus 4.6+ e Sonnet 4.6
 // são 1M por padrão; Haiku 4.5 é 200k. Default conservador p/ modelo desconhecido.
 const MODEL_CTX: Record<string, number> = {
+  "claude-opus-5": 1_000_000,
+  "claude-sonnet-5": 1_000_000,
   "claude-opus-4-8": 1_000_000,
   "claude-sonnet-4-6": 1_000_000,
   "claude-haiku-4-5-20251001": 200_000,

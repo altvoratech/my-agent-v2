@@ -16,9 +16,11 @@ export const EFFORTS = [
 ];
 
 // janela de contexto por modelo (tokens). Fonte: docs Anthropic "Context windows"
-// (jul/2026) — Opus 4.6+/4.7/4.8 e Sonnet 4.6 são 1M por padrão (sem beta header);
-// Haiku 4.5 e Sonnet 4.5 são 200k. Default conservador 200k p/ modelo desconhecido.
+// (jul/2026) — Opus 5, Opus 4.6+/4.7/4.8, Sonnet 5 e Sonnet 4.6 são 1M por padrão
+// (sem beta header); Haiku 4.5 é 200k. Default conservador 200k p/ desconhecido.
 export const CONTEXT_WINDOW: Record<string, number> = {
+  "claude-opus-5": 1_000_000,
+  "claude-sonnet-5": 1_000_000,
   "claude-opus-4-8": 1_000_000,
   "claude-sonnet-4-6": 1_000_000,
   "claude-haiku-4-5-20251001": 200_000,
@@ -28,7 +30,9 @@ export function contextWindowFor(model: string) {
 }
 
 export const MODELS = [
-  { id: "claude-sonnet-4-6", label: "Sonnet 4.6" },
+  { id: "claude-opus-5", label: "Opus 5" },
+  { id: "claude-sonnet-5", label: "Sonnet 5" },
   { id: "claude-opus-4-8", label: "Opus 4.8" },
+  { id: "claude-sonnet-4-6", label: "Sonnet 4.6" },
   { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
 ];
