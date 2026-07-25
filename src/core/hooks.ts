@@ -3,6 +3,7 @@
 // sem precisar instrumentar cada tool na mão. (API confirmada em hooks.md das docs.)
 import type { HookCallback, PreToolUseHookInput, PostToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { log } from './logger.ts';
+import { recordTool } from './turn-tracker.ts';
 
 // Resume o input/output de uma tool para um preview curto (não inflar o log).
 function preview(value: unknown, max = 160): string {
@@ -12,6 +13,7 @@ function preview(value: unknown, max = 160): string {
 
 export const onPreToolUse: HookCallback = async (input, toolUseID) => {
   const pre = input as PreToolUseHookInput;
+  recordTool(pre.session_id, pre.tool_name, Boolean(pre.agent_id));
   await log.info('tool.pre', { tool: pre.tool_name, id: toolUseID, input: preview(pre.tool_input) });
   return {}; // objeto vazio = não interfere, deixa a tool rodar
 };
