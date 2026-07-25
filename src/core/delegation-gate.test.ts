@@ -1,5 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { classifyTurn, HEAVY_THRESHOLD, parseVerdict } from './delegation-gate.ts';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { classifyTurn, HEAVY_THRESHOLD, parseVerdict, createDelegationGate } from './delegation-gate.ts';
+import { recordTool, resetAll } from './turn-tracker.ts';
+
+function stopInput(sessionId = 'sess-1', active = false) {
+  return {
+    hook_event_name: 'Stop',
+    stop_hook_active: active,
+    session_id: sessionId,
+    transcript_path: '/tmp/t.jsonl',
+    cwd: '/tmp',
+  } as never;
+}
 
 describe('classifyTurn', () => {
   it('turno leve não é ambíguo', () => {
@@ -42,5 +53,77 @@ describe('parseVerdict', () => {
 
   it('devolve null quando ok não é booleano', () => {
     expect(parseVerdict('{"ok": "sim"}')).toBeNull();
+  });
+});
+
+describe('createDelegationGate', () => {
+  beforeEach(() => resetAll());
+
+  it('turno leve libera sem chamar o juiz', async () => {
+    const judgeFn = vi.fn();
+    const gate = createDelegationGate({ judgeFn });
+    recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+    expect(judgeFn).not.toHaveBeenCalled();
+  });
+
+  it('turno pesado que delegou libera sem chamar o juiz', async () => {
+    const judgeFn = vi.fn();
+    const gate = createDelegationGate({ judgeFn });
+    for (let i = 0; i < 10; i++) recordTool('sess-1', 'Read', false);
+    recordTool('sess-1', 'Agent', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+    expect(judgeFn).not.toHaveBeenCalled();
+  });
+
+  it('turno ambíguo com veredito ok:false bloqueia com a lacuna', async () => {
+    const judgeFn = vi.fn().mockResolvedValue({ ok: false, reason: 'delegue ao explorer' });
+    const gate = createDelegationGate({ judgeFn });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    const out = await gate(stopInput(), '', {} as never);
+    expect(out).toEqual({ decision: 'block', reason: 'delegue ao explorer' });
+  });
+
+  it('juiz que lança libera (fail-open)', async () => {
+    const judgeFn = vi.fn().mockRejectedValue(new Error('boom'));
+    const gate = createDelegationGate({ judgeFn });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+  });
+
+  it('juiz que devolve null libera (fail-open)', async () => {
+    const judgeFn = vi.fn().mockResolvedValue(null);
+    const gate = createDelegationGate({ judgeFn });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+  });
+
+  it('stop_hook_active libera sem auditar (anti-loop)', async () => {
+    const judgeFn = vi.fn();
+    const onAudit = vi.fn();
+    const gate = createDelegationGate({ judgeFn, onAudit });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput('sess-1', true), '', {} as never)).toEqual({});
+    expect(judgeFn).not.toHaveBeenCalled();
+    expect(onAudit).not.toHaveBeenCalled();
+  });
+
+  it('modo observação grava mas não bloqueia', async () => {
+    const judgeFn = vi.fn().mockResolvedValue({ ok: false, reason: 'delegue' });
+    const onAudit = vi.fn();
+    const gate = createDelegationGate({ judgeFn, onAudit, enabled: false });
+    for (let i = 0; i < 8; i++) recordTool('sess-1', 'Read', false);
+    expect(await gate(stopInput(), '', {} as never)).toEqual({});
+    expect(onAudit).toHaveBeenCalledWith(expect.objectContaining({ verdict: 'block' }));
+  });
+
+  it('grava também os turnos liberados pela camada determinística', async () => {
+    const onAudit = vi.fn();
+    const gate = createDelegationGate({ judgeFn: vi.fn(), onAudit });
+    recordTool('sess-1', 'Read', false);
+    await gate(stopInput(), '', {} as never);
+    expect(onAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: 'deterministic', verdict: 'allow', heavyCount: 1 }),
+    );
   });
 });

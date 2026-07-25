@@ -2,9 +2,11 @@
 // trabalho de leitura pesado SEM delegar ao subagente explorer (haiku).
 // Ver docs/superpowers/specs/2026-07-25-portao-delegacao-design.md
 
+import type { HookCallback, StopHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { buildAgentOptions } from '../agents/runtime.ts';
 import { log } from './logger.ts';
+import { takeTurn } from './turn-tracker.ts';
 
 /** Invocar qualquer uma destas conta como delegação de verdade. */
 export const DELEGATION_TOOLS = new Set(['Agent', 'Task', 'Skill']);
@@ -105,4 +107,85 @@ export async function judge(tools: string[]): Promise<JudgeVerdict | null> {
     await log.warn('gate.judge_error', { error: String(err) });
     return null; // fail-open
   }
+}
+
+export interface DelegationAuditInput {
+  toolCounts: string;
+  heavyCount: number;
+  delegated: 0 | 1;
+  layer: 'deterministic' | 'judge';
+  verdict: 'allow' | 'block';
+  reason: string | null;
+  judgeCostUsd: number | null;
+}
+
+export interface GateDeps {
+  /** grava a decisão; injetado de fora para não acoplar src/core a web/ */
+  onAudit?: (row: DelegationAuditInput) => void;
+  /** substituível em teste */
+  judgeFn?: (tools: string[]) => Promise<JudgeVerdict | null>;
+  /** false = modo observação: grava mas nunca bloqueia */
+  enabled?: boolean;
+}
+
+function countOf(tools: string[]): string {
+  return JSON.stringify(
+    tools.reduce<Record<string, number>>((acc, t) => {
+      acc[t] = (acc[t] ?? 0) + 1;
+      return acc;
+    }, {}),
+  );
+}
+
+export function createDelegationGate(deps: GateDeps = {}): HookCallback {
+  const judgeFn = deps.judgeFn ?? judge;
+  const enabled = deps.enabled ?? true;
+
+  return async (input) => {
+    try {
+      const stop = input as StopHookInput;
+      const { tools, stickyDelegation } = takeTurn(stop.session_id);
+
+      // anti-loop: já bloqueamos uma vez neste turno -> deixa parar
+      if (stop.stop_hook_active) return {};
+
+      const raw = classifyTurn(tools);
+      // delegação pegajosa do turno anterior conta como delegação (spec §7 item 4)
+      const delegated = raw.delegated || stickyDelegation;
+      const heavy = raw.heavy;
+      const ambiguous = raw.ambiguous && !stickyDelegation;
+      const base = {
+        toolCounts: countOf(tools),
+        heavyCount: heavy,
+        delegated: (delegated ? 1 : 0) as 0 | 1,
+      };
+
+      if (!ambiguous) {
+        deps.onAudit?.({
+          ...base, layer: 'deterministic', verdict: 'allow', reason: null, judgeCostUsd: null,
+        });
+        return {};
+      }
+
+      const verdict = await judgeFn(tools);
+      if (!verdict || verdict.ok) {
+        deps.onAudit?.({
+          ...base, layer: 'judge', verdict: 'allow', reason: null,
+          judgeCostUsd: verdict?.costUsd ?? null,
+        });
+        return {};
+      }
+
+      const reason = verdict.reason ??
+        'Este turno fez leitura pesada sem delegar. Use o subagente explorer (haiku, read-only) para mapear o código.';
+      deps.onAudit?.({
+        ...base, layer: 'judge', verdict: 'block', reason, judgeCostUsd: verdict.costUsd ?? null,
+      });
+
+      return enabled ? { decision: 'block', reason } : {};
+    } catch (err) {
+      await log.warn('gate.error', { error: String(err) });
+      return {}; // fail-open
+    }
+  };
 }
