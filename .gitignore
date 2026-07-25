@@ -27,3 +27,8 @@ sources-*/
 # Em sources/ versionamos APENAS o manifest.json (registro do que está no Neon).
 # Os .md indexados (docs de terceiros, já embedados) ficam fora do git.
 sources/*.md
+
+# IDE — JetBrains (WebStorm). Config local de máquina, não do projeto.
+.idea/
+# zread — wiki gerada pela CLI a partir do código; artefato regenerável.
+.zread/
