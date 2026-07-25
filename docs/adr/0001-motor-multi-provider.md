@@ -1,9 +1,15 @@
 # ADR 0001 — Motor de Execução do Turno: estratégia multi-provider
 
-**Status:** Proposto
+**Status:** **Adiado — aberto a contribuição** (decidido em 2026-07-25)
 **Data:** 2026-06-29
 **Projeto:** my-agent-v2
 **Autor:** Genildo / revisado por Axiom
+
+> **Se você chegou aqui pensando em contribuir com multi-provider:** a Opção C
+> continua sendo a direção correta e **não foi descartada por motivo técnico** —
+> ela não foi implementada por falta de tempo do autor. Leia a seção
+> [Decisão](#decisão-2026-07-25) no fim do documento: ela diz o que um PR precisa
+> respeitar e o que já foi recusado.
 
 ---
 
@@ -172,13 +178,68 @@ A Opção C é a única que resolve o problema real sem criar um novo: ela abre 
 
 ---
 
+## Decisão (2026-07-25)
+
+**Adiado. A Opção C não foi implementada, e o motor segue sendo o
+`claude-agent-sdk` usado diretamente, sem camada de abstração.**
+
+O motivo **não é técnico**. A análise acima continua válida: a Opção C é a
+recomendação, a A é uma ilusão de multi-provider e a B custa caro demais para o
+retorno. O que mudou foi a premissa econômica do autor — a partir de agosto/2026
+ele consolida o uso em um único plano (Claude Max 20x) e cancela os demais
+serviços de IA. Rodar GPT ou Gemini deixou de ser uma necessidade **para ele**,
+e sem necessidade concreta os 3–5 dias da Opção C competem com trabalho que
+entrega valor imediato.
+
+Havia também um risco que pesou na hora de adiar: o passo 3 dos *Próximos
+passos* reescreve `src/core/guard.ts`, a camada que impede o agente de executar
+operações destrutivas. Mexer nela sem contrapartida de uso era assumir risco em
+troca de nada.
+
+### O que mudou desde junho/2026
+
+Dois fatos alteram o cálculo para quem for pegar isto:
+
+1. **O guard agora tem testes.** Quando este ADR foi escrito, `src/core/guard.ts`
+   não tinha cobertura nenhuma — refatorá-lo era voar no escuro. Hoje
+   `npm test` roda **63 casos** só sobre o guard, cobrindo comandos `Bash`
+   perigosos e seguros, bloqueio de `.env`, fronteira do cwd (incluindo path
+   traversal), `AskUserQuestion` nunca pré-aprovada e a política `askOnMutate`
+   por tipo de tool. Eles são a rede que torna o passo 3 defensável.
+2. **O repositório é público** (2026-07-25). O custo de implementação deixou de
+   ser necessariamente do autor. É por isso que este ADR fica *adiado* e não
+   *rejeitado*: um PR na direção da Opção C é bem-vindo.
+
+### Condições para um PR de multi-provider
+
+Não são burocracia — são o que separa um PR mergeável de uma reescrita recusada:
+
+- **Opção C, não A nem B.** Gateway Anthropic-compat e substituição do motor pelo
+  Vercel AI SDK foram avaliados e recusados; o porquê está acima. Um PR que siga
+  por esses caminhos vai esbarrar nos mesmos argumentos.
+- **O guard fica acima da interface.** Segurança é responsabilidade da
+  orquestração, não do motor. Um adapter não pode ser capaz de "esquecer" de
+  implementá-la.
+- **Os 63 testes do guard passam sem alteração.** Se um teste precisou mudar para
+  o PR passar, o comportamento de segurança mudou — e isso precisa ser discutido
+  antes, na issue, não descoberto na revisão.
+- **Zero regressão funcional.** Aprovação humana, `AskUserQuestion`, streaming
+  com thinking parcial, subagentes e TUI continuam funcionando como hoje.
+- **Um segundo adapter é PR separado.** Extrair a interface (`ClaudeAgentSdkEngine`
+  como único adapter, comportamento idêntico) é a entrega inteira do primeiro PR.
+
+Abra uma issue antes de escrever código. O escopo aqui é grande o bastante para
+que um mal-entendido custe semanas.
+
+---
+
 ## Critérios de revisão deste ADR
 
 Este ADR deve ser revisado quando **qualquer** das seguintes condições ocorrer:
 
 1. Existe uma necessidade operacional concreta de rodar um modelo não-Claude (ex.: custo por token, capacidade específica como `o3-mini` para raciocínio longo, ou acesso offline com modelo local via Ollama).
 2. O `claude-agent-sdk` introduz uma breaking change que força refatoração de `runtime.ts` de qualquer forma — momento ideal para implementar o segundo adapter.
-3. O projeto migra de single-user para multi-user ou recebe um segundo contribuidor, ponto em que a abstração da interface paga dividendos maiores.
+3. O projeto migra de single-user para multi-user ou recebe um segundo contribuidor, ponto em que a abstração da interface paga dividendos maiores. — **Parcialmente ocorrido:** o repositório passou a ser público em 2026-07-25; ainda não há segundo contribuidor.
 
 ---
 
