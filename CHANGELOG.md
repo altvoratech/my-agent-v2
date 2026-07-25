@@ -19,6 +19,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - **Script e2e opt-in** (`npm run e2e:portao`) — único caminho que exercita o juiz `haiku` de verdade, chamado de dentro de um hook `Stop` que roda dentro de outro `query()`. Cria fixture temporária, usa banco temporário, recusa sem credencial e limpa em `try/finally`. Fora do `npm test` porque gasta token real.
 - **`testes/`** — registro organizado da suíte em cinco documentos: panorama, inventário caso a caso (incluindo o que **não** tem teste nenhum), o que a suíte prova de fato, histórico honesto das falhas encontradas, e o que melhorar priorizado.
 - **`docs/portao-delegacao.md`** — documentação do portão: o problema medido que o originou (150 leituras inline contra 6 delegações em 323 chamadas), as duas camadas de decisão, o registro em SQLite e o que ficou deliberadamente de fora.
+- **Repositório público** — publicado em `altvoratech/my-agent-v2`. O remote privado da Genildocs continua como `origin`; o público entrou como `altvora`.
+- **`CONTRIBUTING.md`** — guia de contribuição. Documenta o que não é óbvio de fora: `npm test` roda **offline** (sem Neon, Jina ou chave de API), então mexer em lógica pura, guard, chunker, portão ou UI não exige credencial nenhuma. Registra as invariantes que um PR não pode quebrar — nenhum teste padrão chama modelo, lógica decisória em função pura, dependência cara por injeção, `src/core/` não importa de `web/`, imports com extensão `.ts` sob NodeNext — e o padrão de commit do repositório.
+- **Metadados no `package.json`** — `name`, `version`, `description`, `license`, `repository`, `homepage`, `bugs` e `engines`. `"private": true` impede publish acidental no npm agora que existe `name`: o projeto é uma aplicação, não uma lib.
+- **`JUDGE_TIMEOUT_MS` e `STOP_HOOK_TIMEOUT_S` configuráveis por variável de ambiente** — para remedir o prazo do juiz sem editar código.
 - **TUI: markdown renderizado** — instalada a dependência `web-tree-sitter@0.25.10` (peerDep do `@opentui/core` que não era instalada automaticamente e fazia o tree-sitter falhar silenciosamente). O `<markdown>` no `ChatScreen.tsx` agora roda com `conceal={true}`, ocultando a marcação bruta e exibindo o texto formatado.
 - **TUI: estilos `markup.*` no tema** — adicionados ao `syntaxStyle()` em `tui/theme.ts` os tokens `markup.heading` (níveis 1–4), `markup.bold`, `markup.strong`, `markup.italic`, `markup.list`, `markup.quote`, `markup.link` e `markup.raw`. Sem esses tokens o OpenTUI parseava o markdown mas não aplicava ênfase.
 - **TUI: syntax highlight de linguagens adicionais** — criado `tui/parsers-config.ts` com 9 linguagens extras (Python, Rust, Go, Bash/sh/shell/zsh/fish, C, C++, JSON, YAML, TOML) via parsers tree-sitter WASM e queries SCM carregados por URL (mesmo padrão do OpenCode). Integrado via `addDefaultParsers(extraParsers)` no `tui/index.tsx`.
@@ -35,11 +39,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ### Corrigido
 
+- **A camada 2 do portão nunca funcionou** — a primeira execução do `npm run e2e:portao` revelou que o juiz era abortado em **toda** chamada real. `JUDGE_TIMEOUT_MS` era 8 s e o matcher do `Stop` 10 s; medido em três rodadas, a mesma chamada `haiku` leva ~2 s isolada e **17–23 s** quando feita de dentro do hook `Stop` de outro `query()` — a reentrância custa de 8 a 11×. Uma rodada em três não respondeu em 90 s. Os prazos passam a 30 s e 35 s. Com eles o portão funcionou ponta a ponta pela primeira vez: veredito `block` com a lacuna escrita, a US$ 0,008–0,013 por julgamento.
+- **`npm run e2e:portao` exigia `ANTHROPIC_API_KEY`** e abortava sem ela — mas a aplicação não precisa de API key: sem `settingSources` configurado, o SDK autentica pelo OAuth do Claude Code em `~/.claude/.credentials.json`. O portão de credencial era mais estrito que a própria aplicação e bloqueava a única verificação do juiz real.
 - **TUI: shutdown limpo (mouse + processo fantasma)** — o `renderer.destroy()` adia a finalização quando há frame em curso (60fps); o `process.exit(0)` imediato cortava a restauração nativa antes de `lib.disableMouse()`, deixando o mouse-tracking SGR ativo no shell (`35;43;15M...`). Correção: `renderer.useMouse = false` (setter síncrono) antes do `destroy()` em `quit()` e no Ctrl+C; `onDestroy` dispara o `process.exit(0)` somente após a restauração nativa; `exitOnCtrlC: false` para a app assumir o controle do Ctrl+C.
 - **TUI: backend órfão no shutdown** — o `killSpawned` era assíncrono (`spawn`); em handler de saída o processo podia encerrar antes do `taskkill /T /F` terminar, deixando o backend na porta 3001. Corrigido para `spawnSync` com guarda anti-duplo-kill, movido para o evento `'exit'` do processo (após a restauração nativa).
 - **TUI: Ctrl+C durante streaming não mais encerra o app** — o handler `exitOnCtrlC` interno do OpenTUI e o da app escutavam o mesmo evento; agora só a app controla o Ctrl+C (ocioso → encerra; streaming → para o agente).
 
 ---
+
+### Alterado
+
+- **ADR 0001 (motor multi-provider): `Proposto` → `Adiado — aberto a contribuição`.** A análise continua válida e a Opção C continua sendo a recomendação; o que mudou foi a premissa econômica do autor. Fica *adiado* e não *rejeitado* porque duas coisas mudaram: o guard ganhou 63 casos de teste (não existiam quando o ADR foi escrito) e o repositório é público — o custo de implementação deixou de ser necessariamente do autor. Acrescenta as condições para um PR na direção da Opção C.
+
+### Removido
+
+- **`docs/superpowers/` (spec e plano), `docs/multi-provider.md` e `docs/escolha-de-sdk-ia.html`** — os documentos de processo inventariavam ferramentas internas do autor, fora deste repositório e não acionáveis por ninguém de fora; os outros dois eram órfãos não referenciados e superados pela ADR 0001. Removidos também do histórico via `git filter-repo`, antes que o repo público acumulasse clones. A documentação da fase 1 vive agora em `docs/portao-delegacao.md`.
 
 ## [0.5.0] — TUI: seletores, temas, configuração persistente e experiência completa no terminal
 
