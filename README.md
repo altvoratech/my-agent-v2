@@ -165,7 +165,9 @@ src/
     consultor.ts            Expõe o guardião como MCP server in-process (consultar_guardian)
   core/
     guard.ts      Hook PreToolUse — veta destrutivo; askOnMutate → roteia Write/Edit/Bash ao canUseTool
-    hooks.ts      Tracking de toda tool call (logger)
+    hooks.ts      Tracking de toda tool call (logger) + alimenta o acumulador de turno
+    turn-tracker.ts     Acumula as tools do turno (ignora chamadas de dentro de subagente)
+    delegation-gate.ts  Hook Stop — portão de delegação: camada determinística + juiz haiku
     logger.ts     Log JSONL + .log legível + EventEmitter (para a UI)
 web/
   server/         Express + WebSocket
@@ -185,6 +187,8 @@ tui/              Cliente no terminal — OpenTUI + SolidJS (Bun)
   parsers-config.ts    Linguagens extras via tree-sitter WASM (Python/Rust/Go/Bash/C/C++/JSON/YAML/TOML)
   components/     DialogSelect (lista fuzzy reusável: modelo/effort/tema/comandos)
   screens/        ChatListScreen (lista) · ChatScreen (chat + dialogs + footer + slash)
+testes/           Documentação da suíte — inventário, o que provou, o que falhou, o que falta
+docs/superpowers/ Specs e planos de implementação (brainstorming → spec → plano → execução)
 ```
 
 > ⚙️ O TUI exige `bunfig.toml` com `preload = ["@opentui/solid/preload"]` — é o que liga o transform de
@@ -314,6 +318,35 @@ npm run typecheck                              # tsc servidor (NodeNext) + clien
 
 ---
 
+## 🧪 Testes
+
+```bash
+npm test               # suíte completa — 134 casos, ~360 ms, zero chamada de modelo
+npm run test:watch     # modo watch (Vitest)
+npm run e2e:portao     # opt-in: exercita o juiz haiku de verdade (gasta token)
+```
+
+A suíte padrão é determinística e offline por princípio: **nenhum teste chama LLM**. A lógica decisória é
+extraída para função pura (`classifyTurn`, `parseVerdict`, `chunkMarkdown`, `groupConsecutive`) e as
+dependências caras entram por **injeção** (`judgeFn`, `onAudit`) — o mesmo mecanismo que mantém `src/core/`
+livre de `web/`. O que exige modelo real vive num script opt-in, fora do `npm test`.
+
+O diretório [`testes/`](testes/) documenta o estado real da verificação — não só o que passa:
+
+| Documento | O que responde |
+|---|---|
+| [testes/README.md](testes/README.md) | Panorama, comandos e os princípios em vigor |
+| [testes/inventario.md](testes/inventario.md) | O que existe hoje, arquivo por arquivo, caso por caso — **e o que não tem teste nenhum** |
+| [testes/o-que-deu-certo.md](testes/o-que-deu-certo.md) | O que a suíte de fato prova, e por que se pode confiar nela |
+| [testes/o-que-falhou.md](testes/o-que-falhou.md) | Falhas reais: bugs, testes que passavam com a implementação errada, e o que só apareceu em produção |
+| [testes/o-que-melhorar.md](testes/o-que-melhorar.md) | Lacunas, dívida conhecida e decisões pendentes, priorizadas |
+
+> ⚠️ Cobertura honesta: o **RAG inteiro** (`guardian.ts`, `consultor.ts`), o transporte WebSocket
+> (`session.ts`, `ai-client.ts`) e o TUI **não têm teste**. A lista completa está no
+> [inventário](testes/inventario.md#o-que-não-tem-teste-nenhum).
+
+---
+
 ## 🧰 Stack
 
 | Camada | Tecnologia |
@@ -326,6 +359,7 @@ npm run typecheck                              # tsc servidor (NodeNext) + clien
 | Cliente web | React 18 + Vite 5 + Tailwind 3 · react-markdown · **Shiki** · **lucide-react** · **sonner** · react-textarea-autosize |
 | Cliente terminal | **OpenTUI** (core Zig) + **SolidJS** · rodado com **Bun** |
 | Runtime | tsx (ESM) para web/CLI · Bun para o TUI |
+| Testes | **Vitest 4** (`environment: node`) — ver [`testes/`](testes/) |
 
 ---
 
