@@ -36,6 +36,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@opentui/core": "^0.4.2",
     "@opentui/solid": "^0.4.2",
+    "@radix-ui/themes": "^3.3.0",
     "better-sqlite3": "^12.10.0",
     "cors": "^2.8.6",
     "express": "^4.22.2",

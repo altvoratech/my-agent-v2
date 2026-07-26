@@ -1,6 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Ordem de cascata explícita. A doc do Radix Themes avisa que o Tailwind v3
+   acrescenta os estilos do `@tailwind` DEPOIS do CSS importado — o reset de
+   botão do preflight passaria por cima dos componentes do Radix. Declarar as
+   camadas resolve sem desligar nada: quem vem depois na lista ganha.
+
+     tw-base  <  radix  <  tw-components  <  tw-utilities
+
+   O preflight ainda normaliza a página, o Radix vem por cima dele, e as classes
+   utilitárias do Tailwind continuam sendo a última palavra — que é como o resto
+   deste cliente já está escrito. */
+@layer tw-base, radix, tw-components, tw-utilities;
+
+@import "@radix-ui/themes/styles.css" layer(radix);
+
+@layer tw-base {
+  @tailwind base;
+}
+@layer tw-components {
+  @tailwind components;
+}
+@layer tw-utilities {
+  @tailwind utilities;
+}
 
 /* code blocks: o Shiki (react-shiki) injeta <pre class="shiki"> com cor/fundo
    próprios via inline style. Aqui só garantimos espaçamento e que o estilo de

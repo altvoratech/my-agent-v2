@@ -150,7 +150,49 @@ Ativo registrado em `~/Documentos/ativos/ativo-medir-acionamento-de-tool-e-skill
 
 ---
 
-## 5. Dívida conhecida
+## 5. Radix Themes — integrado, não usado
+
+`@radix-ui/themes@3.3.0` está instalado e fiado no **web chat** (o TUI não foi
+tocado). A UI está idêntica à de antes: o Radix está **disponível**, não usado.
+
+**O que já está de pé:**
+
+- `web/client/globals.css` — cascata explícita
+  `@layer tw-base, radix, tw-components, tw-utilities`, com o Radix importado
+  dentro da sua camada. A doc oficial avisa que o Tailwind v3 acrescenta os
+  estilos do `@tailwind` **depois** do CSS importado, então o reset de botão do
+  preflight passaria por cima dos componentes do Radix. Das três saídas que a
+  doc dá (não usar `@tailwind base` / camadas / `postcss-import`), camadas foi a
+  escolhida: as outras duas custam algo — sem preflight o CSS atual muda de
+  comportamento, e `postcss-import` traz ferramenta nova.
+- `web/client/index.tsx` — `<Theme appearance="light" accentColor="indigo"
+  grayColor="slate" radius="medium">` na **entrada**, não no `App`, para alcançar
+  os portais dos modais. É ali que se ajusta a identidade visual.
+- Verificado no CSS compilado: a diretiva `@layer` na ordem certa, o bloco
+  `@layer radix{…}` e os tokens `--accent-9` / `--gray-1` / `--radius-3`.
+  Build 3,7 s, typecheck limpo, 138 testes verdes.
+
+**A decisão que falta**, e que muda o tamanho do diff:
+
+| | |
+|---|---|
+| **Só os tokens** | usar as CSS vars do Radix nas classes Tailwind que já existem — diff pequeno, ganho de coerência, risco zero |
+| **Componentes** | `Button`/`Card`/`Dialog`/`TextField` substituindo markup nos 16 `.tsx` |
+
+Se for componentes, **fazer piloto antes de espalhar**: `SettingsModal`
+(190 linhas) ou `ApprovalModal` são os candidatos fechados. E vale **delegar** —
+o Stop hook do auditor bloqueou a tentativa de fazer isso no loop principal
+(*"múltiplos arquivos/integração de feature → Task"*), com razão.
+
+Contexto do cliente para quem for mexer: 16 `.tsx`, ~2.000 linhas de UI,
+Tailwind 3 utilitário puro, **zero** classes `dark:` (a UI é só light),
+`@tailwindcss/typography` no prose, Shiki com estilo inline, `sonner` para toast,
+`lucide-react` para ícones. **Não existe teste de UI** — só `toolPanelGrouping`,
+que é função pura. A verificação é visual.
+
+---
+
+## 6. Dívida conhecida
 
 **Causa-raiz do travamento 1-em-3 do juiz.** Medido: a mesma chamada haiku leva
 ~2 s isolada, 17–23 s de dentro do hook `Stop`, e 1 rodada em 3 não respondeu em
@@ -170,6 +212,13 @@ Vite tem `root: "client"`.
 **`log.warn` na falha silenciosa de FK.** Um `chatId` inexistente faz o `INSERT`
 em `delegation_audits` lançar; o fail-open engole e a auditoria some sem log.
 
+**Conflito `solid-js` 1.9.12 × 1.9.13.** `@opentui/solid@0.4.2` declara
+peerDependency `solid-js` **exatamente** `1.9.12`; o projeto tem `1.9.13`. O TUI
+funciona, mas qualquer `npm install` que re-resolva a árvore falha com `ERESOLVE`
+e exige `--legacy-peer-deps` (foi o caminho usado para instalar o Radix, sem
+tocar no `solid-js`). Opções: fixar em 1.9.12, atualizar o `@opentui/solid`, ou
+criar um `.npmrc` documentando a escolha em vez de depender de lembrar da flag.
+
 **Tipar os 12 `any` da camada WS.** `web/server/session.ts`,
 `web/client/lib/api.ts`, `hooks/useAgentSocket.ts`.
 
@@ -180,7 +229,7 @@ testar `session.ts`/`ai-client.ts`, `log.warn` do FK, e o motor multi-provider
 
 ---
 
-## 6. ADR 0001 — uma quarta opção não considerada
+## 7. ADR 0001 — uma quarta opção não considerada
 
 A ADR descreve três caminhos para multi-provider e recomenda a Opção C
 (interface `Engine`). Existe uma quarta que ela não menciona: **orquestrar
